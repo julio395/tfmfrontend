@@ -1,54 +1,44 @@
-const admin = require('firebase-admin');
-const serviceAccount = require('../BaseDatos/credenciales.json');
+import { Client, Account } from 'appwrite';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Inicializar Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+const client = new Client();
+client
+  .setEndpoint(process.env.REACT_APP_APPWRITE_ENDPOINT)
+  .setProject(process.env.REACT_APP_APPWRITE_PROJECT_ID);
 
-// Middleware para verificar el token JWT
-const verifyToken = async (req, res, next) => {
+const account = new Account(client);
+
+// Middleware para verificar el token de sesión de Appwrite
+export const verifyToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split('Bearer ')[1];
-    
     if (!token) {
       return res.status(401).json({ error: 'No se proporcionó token de autenticación' });
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
+    // Validar la sesión con Appwrite
+    const session = await account.getSession(token);
+    req.user = session.userId;
     next();
   } catch (error) {
-    console.error('Error al verificar token:', error);
-    res.status(401).json({ error: 'Token inválido' });
+    console.error('Error al verificar token:', error.message);
+    res.status(401).json({ error: 'Token inválido o sesión expirada' });
   }
 };
 
 // Middleware para verificar si el usuario es admin
-const isAdmin = async (req, res, next) => {
+export const isAdmin = async (req, res, next) => {
   try {
-    const userDoc = await admin.firestore()
-      .collection('users')
-      .doc(req.user.uid)
-      .get();
-
-    if (!userDoc.exists) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+    // Obtener datos del usuario desde Appwrite
+    const user = await account.get();
+    if (user.prefs?.role === 'admin') {
+      next();
+    } else {
+      res.status(403).json({ error: 'No tienes permisos de administrador' });
     }
-
-    const userData = userDoc.data();
-    if (userData.role !== 'admin') {
-      return res.status(403).json({ error: 'No tienes permisos de administrador' });
-    }
-
-    next();
   } catch (error) {
-    console.error('Error al verificar rol de admin:', error);
+    console.error('Error al verificar rol de admin:', error.message);
     res.status(500).json({ error: 'Error al verificar permisos' });
   }
-};
-
-module.exports = {
-  verifyToken,
-  isAdmin
 }; 

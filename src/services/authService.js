@@ -1,5 +1,4 @@
-import { auth } from '../firebase/firebase';
-import { getIdToken } from 'firebase/auth';
+import { client, account } from '../appwrite/appwrite.js';
 
 class AuthService {
   constructor() {
@@ -10,12 +9,11 @@ class AuthService {
 
   async getToken() {
     try {
-      const user = auth.currentUser;
-      if (!user) {
+      const session = await account.getSession('current');
+      if (!session) {
         throw new Error('No hay usuario autenticado');
       }
-      const token = await getIdToken(user, true);
-      return token;
+      return session.providerAccessToken;
     } catch (error) {
       console.error('Error al obtener el token:', error);
       throw error;
@@ -62,11 +60,7 @@ class AuthService {
 
   async refreshToken() {
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('No hay usuario autenticado');
-      }
-      await user.getIdToken(true);
+      await account.getSession('current');
     } catch (error) {
       console.error('Error al refrescar el token:', error);
       throw error;

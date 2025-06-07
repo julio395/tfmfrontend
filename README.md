@@ -1,3 +1,83 @@
+# TFM - Aplicación de Gestión de Seguridad
+
+## Configuración del Entorno
+
+### Variables de Entorno
+
+1. Crea un archivo `.env` en la raíz del proyecto basándote en `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+2. Configura las siguientes variables en tu archivo `.env`:
+
+```env
+REACT_APP_APPWRITE_ENDPOINT=your_appwrite_endpoint
+REACT_APP_APPWRITE_PROJECT_ID=your_project_id
+MONGODB_URI=your_mongodb_uri
+MONGODB_DB_NAME=your_database_name
+```
+
+### Seguridad
+
+- **NO** compartas tu archivo `.env` con otros desarrolladores
+- **NO** subas el archivo `.env` al control de versiones
+- Mantén tus claves y secretos seguros
+- Usa diferentes valores para desarrollo y producción
+- Asegúrate de que la base de datos MongoDB esté protegida con autenticación
+
+### Desarrollo Local
+
+1. Instala las dependencias:
+```bash
+npm install
+```
+
+2. Asegúrate de tener MongoDB instalado y ejecutándose localmente:
+```bash
+# En Windows
+net start MongoDB
+
+# En Linux/Mac
+sudo service mongod start
+```
+
+3. Inicia el servidor de desarrollo:
+```bash
+npm start
+```
+
+### Despliegue
+
+El proyecto está configurado para desplegarse en Coolify. Las variables de entorno y la base de datos MongoDB se configuran automáticamente desde el panel de control de Coolify.
+
+#### Configuración de MongoDB en Coolify
+
+1. En el panel de control de Coolify, ve a la sección de bases de datos
+2. Selecciona MongoDB
+3. Configura las credenciales y el nombre de la base de datos
+4. Copia la URI de conexión y configúrala en las variables de entorno
+
+## Estructura del Proyecto
+
+```
+src/
+  ├── appwrite/        # Configuración de Appwrite (autenticación)
+  ├── components/      # Componentes React
+  ├── services/        # Servicios (autenticación, etc.)
+  ├── models/          # Modelos de MongoDB
+  ├── database/        # Configuración de MongoDB
+  └── styles/          # Estilos CSS
+```
+
+## Tecnologías Utilizadas
+
+- React
+- Appwrite (Autenticación)
+- MongoDB (Base de datos)
+- Coolify (Plataforma de despliegue)
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
