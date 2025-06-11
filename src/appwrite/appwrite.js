@@ -33,13 +33,18 @@ export const getUsers = async () => {
         // Si el usuario actual es admin, intentamos obtener la lista de usuarios
         if (currentUser.labels?.includes('admin')) {
             try {
+                // Obtenemos el token de la sesión actual
+                const token = session.providerAccessToken;
+                
                 // Intentamos obtener la lista de usuarios usando el endpoint de la API
                 const response = await fetch(`${APPWRITE_ENDPOINT}/users`, {
                     method: 'GET',
                     headers: {
                         'X-Appwrite-Project': APPWRITE_PROJECT_ID,
+                        'X-Appwrite-Key': token,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    credentials: 'include'
                 });
 
                 if (!response.ok) {

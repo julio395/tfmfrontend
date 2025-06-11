@@ -118,21 +118,28 @@ const AdminHome = ({ userData, onLogout }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setIsLoading(true);
         const session = await account.getSession('current');
-        if (!session || userData?.role !== 'admin') {
-          navigate('/login', { replace: true });
-          return;
+        if (!session) {
+          throw new Error('No hay sesión activa');
         }
+
+        const currentUser = await account.get();
+        if (!currentUser.labels?.includes('admin')) {
+          throw new Error('No tienes permisos de administrador');
+        }
+
         await fetchUsers();
       } catch (error) {
-        setErrorMessage('Error al verificar autenticación');
+        console.error('Error en checkAuth:', error);
+        setErrorMessage(error.message || 'Error al verificar autenticación');
         navigate('/login', { replace: true });
       } finally {
         setIsLoading(false);
       }
     };
     checkAuth();
-  }, [navigate, userData]);
+  }, [navigate]);
 
   useEffect(() => {
     if (activeView === 'databases') {
@@ -143,6 +150,8 @@ const AdminHome = ({ userData, onLogout }) => {
 
   const fetchUsers = async () => {
     try {
+      setIsLoading(true);
+      setErrorMessage(null);
       const response = await getUsers();
       if (response && response.users) {
         const usersWithRoles = response.users.map(user => ({
@@ -155,8 +164,11 @@ const AdminHome = ({ userData, onLogout }) => {
         setUsers([]);
       }
     } catch (error) {
-      setErrorMessage('Error al obtener usuarios');
+      console.error('Error en fetchUsers:', error);
+      setErrorMessage(error.message || 'Error al obtener usuarios');
       setUsers([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
