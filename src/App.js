@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { account } from './appwrite/appwrite.js';
-import Login from './Login.js';
+import Login from './components/Login.js';
 import Register from './Register.js';
 import UserHome from './components/UserHome.js';
 import AdminHome from './components/AdminHome.js';
@@ -62,7 +62,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Routes>
         <Route 
           path="/login" 

@@ -6,7 +6,6 @@ const client = new Client();
 // Configurar el endpoint y el proyecto de Appwrite
 const APPWRITE_ENDPOINT = 'https://appwrite-tfm.julio.coolify.hgccarlos.es/v1';
 const APPWRITE_PROJECT_ID = '683f418d003d466cfe2e';
-const APPWRITE_API_KEY = 'standard_8e9bf336726029f16bb63bf8babb8c33cf0f7fdab1353d33f694baa7b1fce7176c0fbd30b0649bd745f137fef3691ebd6b75bbdf50924fe3b270836625681d1d464f7b02867df94a58ba34aee8058e76214eafb741f23ca1c157cefc72c9c4513da0edc6a36e6cf1d37b82e0410febf33f8038ced76c333c6c31523560f76f69';
 
 // Configurar el cliente de Appwrite
 client
@@ -17,20 +16,16 @@ client
 const account = new Account(client);
 
 // Configuración de la API de MongoDB
-const MONGODB_API_URL = 'http://localhost:5000/api/tfm';
+export const MONGODB_API_URL = 'http://localhost:5000/api/tfm';
 
 // Función para obtener usuarios
 export const getUsers = async () => {
     try {
-        console.log('Intentando obtener usuarios de Appwrite...');
-        
         // Obtenemos la sesión actual para verificar permisos
         const session = await account.getSession('current');
-        console.log('Sesión actual:', session);
-
+        
         // Obtenemos el usuario actual
         const currentUser = await account.get();
-        console.log('Usuario actual:', currentUser);
 
         // Si el usuario actual es admin, intentamos obtener la lista de usuarios
         if (currentUser.labels?.includes('admin')) {
@@ -40,7 +35,6 @@ export const getUsers = async () => {
                     method: 'GET',
                     headers: {
                         'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-                        'X-Appwrite-Key': APPWRITE_API_KEY,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -50,7 +44,6 @@ export const getUsers = async () => {
                 }
 
                 const data = await response.json();
-                console.log('Respuesta de la API:', data);
 
                 // Procesamos los usuarios
                 const usersDetails = data.users.map(user => ({
@@ -60,7 +53,6 @@ export const getUsers = async () => {
                     status: user.status || 'Activo'
                 }));
 
-                console.log('Usuarios procesados:', usersDetails);
                 return { users: usersDetails };
             } catch (error) {
                 console.error('Error al obtener usuarios:', error);
@@ -78,7 +70,6 @@ export const getUsers = async () => {
 // Funciones para interactuar con MongoDB
 export const fetchMongoDBData = async (collection) => {
     try {
-        console.log(`Obteniendo datos de ${collection} desde MongoDB...`);
         const response = await fetch(`${MONGODB_API_URL}/${collection}`, {
             method: 'GET',
             headers: {
@@ -94,7 +85,6 @@ export const fetchMongoDBData = async (collection) => {
         }
 
         const data = await response.json();
-        console.log(`Datos obtenidos de ${collection}:`, data);
         return data;
     } catch (error) {
         console.error(`Error al obtener datos de ${collection}:`, error);
@@ -104,7 +94,6 @@ export const fetchMongoDBData = async (collection) => {
 
 export const createMongoDBItem = async (collection, data) => {
     try {
-        console.log(`Creando item en ${collection}...`, data);
         const response = await fetch(`${MONGODB_API_URL}/${collection.toLowerCase()}`, {
             method: 'POST',
             headers: {
@@ -118,7 +107,6 @@ export const createMongoDBItem = async (collection, data) => {
         }
 
         const result = await response.json();
-        console.log(`Item creado en ${collection}:`, result);
         return result;
     } catch (error) {
         console.error(`Error al crear item en ${collection}:`, error);
@@ -128,7 +116,6 @@ export const createMongoDBItem = async (collection, data) => {
 
 export const updateMongoDBItem = async (collection, id, data) => {
     try {
-        console.log(`Actualizando item ${id} en ${collection}...`, data);
         const response = await fetch(`${MONGODB_API_URL}/${collection.toLowerCase()}/${id}`, {
             method: 'PUT',
             headers: {
@@ -142,7 +129,6 @@ export const updateMongoDBItem = async (collection, id, data) => {
         }
 
         const result = await response.json();
-        console.log(`Item actualizado en ${collection}:`, result);
         return result;
     } catch (error) {
         console.error(`Error al actualizar item en ${collection}:`, error);
@@ -152,7 +138,6 @@ export const updateMongoDBItem = async (collection, id, data) => {
 
 export const deleteMongoDBItem = async (collection, id) => {
     try {
-        console.log(`Eliminando item ${id} de ${collection}...`);
         const response = await fetch(`${MONGODB_API_URL}/${collection.toLowerCase()}/${id}`, {
             method: 'DELETE'
         });
@@ -162,7 +147,6 @@ export const deleteMongoDBItem = async (collection, id) => {
         }
 
         const result = await response.json();
-        console.log(`Item eliminado de ${collection}:`, result);
         return result;
     } catch (error) {
         console.error(`Error al eliminar item en ${collection}:`, error);

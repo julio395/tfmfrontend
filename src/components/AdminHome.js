@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { account, getUsers, fetchMongoDBData } from '../appwrite/appwrite.js';
+import { account, getUsers, fetchMongoDBData, MONGODB_API_URL } from '../appwrite/appwrite.js';
 import Navbar from './Navbar.js';
 import '../styles/AdminHome.css';
 
@@ -15,8 +15,105 @@ const AdminHome = ({ userData, onLogout }) => {
   const [activeView, setActiveView] = useState('users');
   const [activeCollection, setActiveCollection] = useState('Activos');
   const [dbData, setDbData] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 0
+  });
 
   const collections = ['Activos', 'Amenazas', 'Vulnerabilidades', 'Salvaguardas', 'Relaciones'];
+
+  const checkBackendConnection = async () => {
+    try {
+      const baseUrl = MONGODB_API_URL.replace('/api/tfm', '');
+      const response = await fetch(`${baseUrl}/api/test`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en la respuesta: ${response.status} ${response.statusText}`);
+      }
+
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const checkMongoDBStatus = async () => {
+    try {
+      const baseUrl = MONGODB_API_URL.replace('/api/tfm', '');
+      const response = await fetch(`${baseUrl}/api/mongodb-status`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error en la respuesta: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.status === 'connected';
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const fetchCollectionData = async (page = 1) => {
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      
+      const isBackendConnected = await checkBackendConnection();
+      if (!isBackendConnected) {
+        throw new Error('No se pudo conectar con el backend');
+      }
+
+      const isMongoDBConnected = await checkMongoDBStatus();
+      if (!isMongoDBConnected) {
+        throw new Error('No se pudo conectar con MongoDB');
+      }
+
+      const url = `${MONGODB_API_URL}/${activeCollection.toLowerCase()}?page=${page}&limit=50`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error al obtener datos de la colección: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.data) {
+        throw new Error('Formato de respuesta inválido: no se encontró el campo data');
+      }
+      
+      setDbData(result.data);
+      setPagination(result.pagination);
+    } catch (error) {
+      setErrorMessage(`Error al cargar los datos: ${error.message}`);
+      setDbData([]);
+      setPagination({
+        page: 1,
+        limit: 50,
+        total: 0,
+        totalPages: 0
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -27,62 +124,48 @@ const AdminHome = ({ userData, onLogout }) => {
           return;
         }
         await fetchUsers();
-        if (activeView === 'databases') {
-          await fetchCollectionData();
-        }
       } catch (error) {
-        console.error('Error en AdminHome:', error);
         setErrorMessage('Error al verificar autenticación');
         navigate('/login', { replace: true });
       } finally {
         setIsLoading(false);
       }
     };
-
     checkAuth();
-  }, [navigate, userData, activeView, activeCollection]);
+  }, [navigate, userData]);
+
+  useEffect(() => {
+    if (activeView === 'databases') {
+      fetchCollectionData(pagination.page);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, activeCollection, pagination.page]);
 
   const fetchUsers = async () => {
     try {
       const response = await getUsers();
-      console.log('Usuarios obtenidos:', response);
       if (response && response.users) {
         const usersWithRoles = response.users.map(user => ({
           ...user,
           role: user.labels?.includes('admin') ? 'Admin' : 'Usuario',
           name: user.name || 'Sin nombre'
         }));
-        console.log('Usuarios procesados:', usersWithRoles);
         setUsers(usersWithRoles);
       } else {
-        console.error('Formato de respuesta inesperado:', response);
         setUsers([]);
       }
     } catch (error) {
-      console.error('Error al obtener usuarios:', error);
+      setErrorMessage('Error al obtener usuarios');
       setUsers([]);
-    }
-  };
-
-  const fetchCollectionData = async () => {
-    try {
-      const data = await fetchMongoDBData(activeCollection);
-      console.log(`Datos de ${activeCollection}:`, data);
-      setDbData(data);
-    } catch (error) {
-      console.error(`Error al obtener datos de ${activeCollection}:`, error);
-      setErrorMessage(`Error al obtener datos de ${activeCollection}`);
     }
   };
 
   const handleUserDelete = async (userId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
       try {
-        console.log('Eliminando usuario:', userId);
         await account.delete(userId);
         await fetchUsers();
       } catch (error) {
-        console.error('Error al eliminar usuario:', error);
         setErrorMessage('Error al eliminar usuario');
       }
     }
@@ -90,11 +173,9 @@ const AdminHome = ({ userData, onLogout }) => {
 
   const handleUserUpdate = async (userId, data) => {
     try {
-      console.log('Actualizando usuario:', userId, data);
       await account.update(userId, data);
       await fetchUsers();
     } catch (error) {
-      console.error('Error al actualizar usuario:', error);
       setErrorMessage('Error al actualizar usuario');
     }
   };
@@ -102,14 +183,28 @@ const AdminHome = ({ userData, onLogout }) => {
   const handleDBItemDelete = async (itemId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este elemento?')) {
       try {
-        console.log('Eliminando elemento:', itemId);
         await fetchMongoDBData(activeCollection.toLowerCase(), itemId);
         await fetchCollectionData();
       } catch (error) {
-        console.error('Error al eliminar elemento:', error);
         setErrorMessage('Error al eliminar elemento');
       }
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchCollectionData(newPage);
+    }
+  };
+
+  const renderValue = (value) => {
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
   };
 
   const renderUsersView = () => (
@@ -168,7 +263,10 @@ const AdminHome = ({ userData, onLogout }) => {
           <button
             key={collection}
             className={activeCollection === collection ? 'active' : ''}
-            onClick={() => setActiveCollection(collection)}
+            onClick={() => {
+              setActiveCollection(collection);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
           >
             {collection}
           </button>
@@ -194,7 +292,7 @@ const AdminHome = ({ userData, onLogout }) => {
                 {Object.entries(item)
                   .filter(([key]) => key !== '_id')
                   .map(([key, value]) => (
-                    <td key={key}>{value}</td>
+                    <td key={key}>{renderValue(value)}</td>
                   ))
                 }
                 <td>
@@ -219,6 +317,26 @@ const AdminHome = ({ userData, onLogout }) => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="pagination-controls">
+        <button 
+          onClick={() => handlePageChange(pagination.page - 1)}
+          disabled={pagination.page === 1}
+          className="pagination-btn"
+        >
+          Anterior
+        </button>
+        <span className="pagination-info">
+          Página {pagination.page} de {pagination.totalPages}
+        </span>
+        <button 
+          onClick={() => handlePageChange(pagination.page + 1)}
+          disabled={pagination.page === pagination.totalPages}
+          className="pagination-btn"
+        >
+          Siguiente
+        </button>
       </div>
     </div>
   );
