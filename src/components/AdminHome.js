@@ -115,51 +115,39 @@ const AdminHome = ({ userData, onLogout }) => {
     }
   };
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        setIsLoading(true);
-        const session = await account.getSession('current');
-        if (!session) {
-          throw new Error('No hay sesión activa');
-        }
-
-        const currentUser = await account.get();
-        if (!currentUser.labels?.includes('admin')) {
-          throw new Error('No tienes permisos de administrador');
-        }
-
-        await fetchUsers();
-      } catch (error) {
-        console.error('Error en checkAuth:', error);
-        setErrorMessage(error.message || 'Error al verificar autenticación');
-        navigate('/login', { replace: true });
-      } finally {
-        setIsLoading(false);
+  const checkAuth = async () => {
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      
+      const session = await account.getSession('current');
+      if (!session) {
+        throw new Error('No hay sesión activa');
       }
-    };
-    checkAuth();
-  }, [navigate]);
 
-  useEffect(() => {
-    if (activeView === 'databases') {
-      fetchCollectionData(pagination.page);
+      const currentUser = await account.get();
+      if (!currentUser.labels?.includes('admin')) {
+        throw new Error('No tienes permisos de administrador');
+      }
+
+      await fetchUsers();
+    } catch (error) {
+      console.error('Error en checkAuth:', error);
+      setErrorMessage(error.message || 'Error al verificar autenticación');
+      navigate('/login', { replace: true });
+    } finally {
+      setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, activeCollection, pagination.page]);
+  };
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
       setErrorMessage(null);
+      
       const response = await getUsers();
       if (response && response.users) {
-        const usersWithRoles = response.users.map(user => ({
-          ...user,
-          role: user.labels?.includes('admin') ? 'Admin' : 'Usuario',
-          name: user.name || 'Sin nombre'
-        }));
-        setUsers(usersWithRoles);
+        setUsers(response.users);
       } else {
         setUsers([]);
       }
@@ -171,6 +159,13 @@ const AdminHome = ({ userData, onLogout }) => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeView === 'databases') {
+      fetchCollectionData(pagination.page);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, activeCollection, pagination.page]);
 
   const handleUserDelete = async (userId) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
