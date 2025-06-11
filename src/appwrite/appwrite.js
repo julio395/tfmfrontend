@@ -16,7 +16,10 @@ client
 const account = new Account(client);
 
 // Configuración de la API de MongoDB
-export const MONGODB_API_URL = 'http://localhost:5000/api/tfm';
+const isDevelopment = window.location.hostname === 'localhost';
+export const MONGODB_API_URL = isDevelopment 
+    ? 'http://localhost:5000/api/tfm'
+    : 'http://5.135.131.59:5000/api/tfm';
 
 // Función para obtener usuarios
 export const getUsers = async () => {
