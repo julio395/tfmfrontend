@@ -40,6 +40,7 @@ const AdminHome = ({ userData, onLogout }) => {
 
       return true;
     } catch (error) {
+      console.error('Error al conectar con el backend:', error);
       return false;
     }
   };
@@ -61,6 +62,7 @@ const AdminHome = ({ userData, onLogout }) => {
       const data = await response.json();
       return data.status === 'connected';
     } catch (error) {
+      console.error('Error al verificar estado de MongoDB:', error);
       return false;
     }
   };
@@ -102,6 +104,7 @@ const AdminHome = ({ userData, onLogout }) => {
       setDbData(result.data);
       setPagination(result.pagination);
     } catch (error) {
+      console.error('Error al cargar datos:', error);
       setErrorMessage(`Error al cargar los datos: ${error.message}`);
       setDbData([]);
       setPagination({
@@ -161,10 +164,13 @@ const AdminHome = ({ userData, onLogout }) => {
   };
 
   useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
     if (activeView === 'databases') {
       fetchCollectionData(pagination.page);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeView, activeCollection, pagination.page]);
 
   const handleUserDelete = async (userId) => {
@@ -348,79 +354,38 @@ const AdminHome = ({ userData, onLogout }) => {
     </div>
   );
 
-  if (isLoading) {
-    return (
-      <div className="loading">
-        Cargando...
-      </div>
-    );
-  }
-
-  if (errorMessage) {
-    return (
-      <div className="error">
-        {errorMessage}
-      </div>
-    );
-  }
-
   return (
-    <div className="admin-home">
-      <Navbar userData={userData} role="admin" onLogout={onLogout} />
-      
-      <main>
-        <h1>Panel de Administración</h1>
-
-        <div className="view-selector">
-          <button
-            className={activeView === 'users' ? 'active' : ''}
-            onClick={() => setActiveView('users')}
-          >
-            Usuarios
-          </button>
-          <button
-            className={activeView === 'databases' ? 'active' : ''}
-            onClick={() => setActiveView('databases')}
-          >
-            Bases de datos
-          </button>
+    <div className="admin-container">
+      <Navbar userData={userData} onLogout={onLogout} />
+      {isLoading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Cargando...</p>
         </div>
-
-        <div className="content-container">
+      ) : errorMessage ? (
+        <div className="error-container">
+          <p className="error-message">{errorMessage}</p>
+          <button onClick={() => window.location.reload()}>Reintentar</button>
+        </div>
+      ) : (
+        <div className="admin-content">
+          <div className="view-selector">
+            <button
+              className={activeView === 'users' ? 'active' : ''}
+              onClick={() => setActiveView('users')}
+            >
+              Usuarios
+            </button>
+            <button
+              className={activeView === 'databases' ? 'active' : ''}
+              onClick={() => setActiveView('databases')}
+            >
+              Bases de Datos
+            </button>
+          </div>
           {activeView === 'users' ? renderUsersView() : renderDatabasesView()}
         </div>
-
-        {showModal && (
-          <div className="modal">
-            <div className="modal-content">
-              <h3>{modalType === 'create' ? 'Crear Nuevo' : 'Editar'}</h3>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleUserUpdate(modalData.$id, modalData);
-              }}>
-                {Object.keys(modalData)
-                  .filter(key => key !== '_id' && key !== '$id')
-                  .map(key => (
-                    <div key={key} className="form-group">
-                      <label>{key}</label>
-                      <input
-                        type="text"
-                        value={modalData[key]}
-                        onChange={(e) => setModalData({...modalData, [key]: e.target.value})}
-                      />
-                    </div>
-                  ))}
-                <div className="modal-actions">
-                  <button type="submit" className="btn-save">Guardar</button>
-                  <button type="button" onClick={() => setShowModal(false)} className="btn-cancel">
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </main>
+      )}
     </div>
   );
 };

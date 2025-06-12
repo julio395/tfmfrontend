@@ -1,3 +1,174 @@
+.admin-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.view-selector {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.view-selector button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #f3f3f3;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-selector button.active {
+  background-color: #3498db;
+  color: white;
+}
+
+.table-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.btn-edit, .btn-delete {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 0.5rem;
+}
+
+.btn-edit {
+  background-color: #3498db;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-save, .btn-cancel {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-save {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.btn-cancel {
+  background-color: #95a5a6;
+  color: white;
+}
+
 .admin-home {
   min-height: 100vh;
   background-color: #f8f9fa;
@@ -13,106 +184,6 @@
   text-align: center;
   margin-bottom: 2rem;
   color: #333;
-}
-
-.view-selector {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.view-selector button {
-  padding: 1.5rem 2rem;
-  background-color: #f8f9fa;
-  color: #333;
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  font-weight: 500;
-  min-width: 200px;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.view-selector button:hover {
-  background-color: #e9ecef;
-}
-
-.view-selector button.active {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #007bff;
-}
-
-.content-container {
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  padding: 2rem;
-}
-
-.table-container {
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-th, td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #dee2e6;
-}
-
-th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-}
-
-.btn-create {
-  padding: 0.5rem 1rem;
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-bottom: 1rem;
-}
-
-.btn-create:hover {
-  background-color: #218838;
-}
-
-.btn-edit {
-  padding: 0.25rem 0.5rem;
-  background-color: #007bff;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-right: 0.5rem;
-}
-
-.btn-edit:hover {
-  background-color: #0056b3;
-}
-
-.btn-delete {
-  padding: 0.25rem 0.5rem;
-  background-color: #dc3545;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-delete:hover {
-  background-color: #c82333;
 }
 
 .collection-selector {
@@ -139,106 +210,6 @@ th {
   background-color: #007bff;
   color: #fff;
   border-color: #007bff;
-}
-
-.modal {
-  position: fixed;
-  top: 5vh;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90vw;
-  max-width: 600px;
-  max-height: 90vh;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.2);
-  padding: 2rem;
-  overflow-y: auto;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: #fff;
-  padding: 2rem;
-  border-radius: 8px;
-  min-width: 400px;
-  max-width: 600px;
-  width: 90%;
-}
-
-.modal-content h3 {
-  margin-bottom: 1.5rem;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #666;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.btn-save {
-  padding: 0.5rem 1rem;
-  background-color: #28a745;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-save:hover {
-  background-color: #218838;
-}
-
-.btn-cancel {
-  padding: 0.5rem 1rem;
-  background-color: #6c757d;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.btn-cancel:hover {
-  background-color: #5a6268;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.2rem;
-  color: #666;
-}
-
-.error {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  font-size: 1.2rem;
-  color: #dc3545;
-  padding: 20px;
-  text-align: center;
 }
 
 .admin-home h2 {
@@ -312,12 +283,6 @@ th {
 
 .logout-button:hover {
   background-color: #c82333;
-}
-
-.admin-content {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
 }
 
 .users-section {
