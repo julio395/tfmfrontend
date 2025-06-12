@@ -152,11 +152,12 @@ const AdminHome = ({ userData, onLogout }) => {
       if (response && response.users) {
         setUsers(response.users);
       } else {
+        console.log('No se encontraron usuarios');
         setUsers([]);
       }
     } catch (error) {
       console.error('Error en fetchUsers:', error);
-      setErrorMessage(error.message || 'Error al obtener usuarios');
+      setErrorMessage(error.message || 'Error al obtener usuarios. Por favor, intenta de nuevo.');
       setUsers([]);
     } finally {
       setIsLoading(false);

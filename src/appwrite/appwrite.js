@@ -1,4 +1,4 @@
-import { Client, Account, ID, Teams } from 'appwrite';
+import { Client, Account, ID, Teams, Users } from 'appwrite';
 
 // Configuración de Appwrite
 const client = new Client();
@@ -15,6 +15,7 @@ client
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
 const teams = new Teams(client);
+const users = new Users(client);
 
 // Configuración de la API de MongoDB
 const isDevelopment = window.location.hostname === 'localhost';
@@ -35,10 +36,10 @@ export const getUsers = async () => {
         if (currentUser.labels?.includes('admin')) {
             try {
                 // Usamos el SDK de Appwrite para obtener los usuarios
-                const response = await teams.list();
+                const response = await users.list();
                 
                 // Procesamos los usuarios
-                const usersDetails = response.teams.map(user => ({
+                const usersDetails = response.users.map(user => ({
                     ...user,
                     role: user.labels?.includes('admin') ? 'Admin' : 'Usuario',
                     name: user.name || 'Sin nombre',
