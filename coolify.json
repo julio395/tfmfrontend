@@ -6,7 +6,7 @@
   "outputDirectory": "build",
   "installCommand": "npm install",
   "environment": {
-    "REACT_APP_API_URL": "https://backend-tfm.julio.coolify.hgccarlos.es",
+    "REACT_APP_API_URL": "https://backendtfm.julio.coolify.hgccarlos.es",
     "REACT_APP_APPWRITE_ENDPOINT": "https://appwrite-tfm.julio.coolify.hgccarlos.es/v1",
     "REACT_APP_APPWRITE_PROJECT_ID": "683f418d003d466cfe2e",
     "REACT_APP_APPWRITE_DATABASE_ID": "683f418d003d466cfe2e",
