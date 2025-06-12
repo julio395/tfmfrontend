@@ -50,45 +50,56 @@ export const createUser = async (email, password, name) => {
 export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
+        console.log('Endpoint:', client.config.endpoint);
+        console.log('Project ID:', client.config.project);
         
         // Primero intentamos crear la sesión
         console.log('Creando sesión...');
-        const session = await account.createEmailSession(email, password);
-        console.log('Sesión creada exitosamente:', session);
+        try {
+            const session = await account.createEmailSession(email, password);
+            console.log('Sesión creada exitosamente:', session);
 
-        // Luego obtenemos la información del usuario
-        console.log('Obteniendo información del usuario...');
-        const user = await account.get();
-        console.log('Información del usuario obtenida:', user);
+            // Luego obtenemos la información del usuario
+            console.log('Obteniendo información del usuario...');
+            const user = await account.get();
+            console.log('Información del usuario obtenida:', user);
 
-        // Verificamos el rol del usuario basado en las etiquetas
-        console.log('Verificando rol del usuario...');
-        const isAdmin = user.labels && user.labels.includes('admin');
-        
-        // Si no tiene la etiqueta admin, es un usuario normal
-        const userWithRole = {
-            ...user,
-            role: isAdmin ? 'admin' : 'user'
-        };
+            // Verificamos el rol del usuario basado en las etiquetas
+            console.log('Verificando rol del usuario...');
+            const isAdmin = user.labels && user.labels.includes('admin');
+            
+            // Si no tiene la etiqueta admin, es un usuario normal
+            const userWithRole = {
+                ...user,
+                role: isAdmin ? 'admin' : 'user'
+            };
 
-        console.log('Login completado exitosamente. Rol:', userWithRole.role);
-        return { session, user: userWithRole };
+            console.log('Login completado exitosamente. Rol:', userWithRole.role);
+            return { session, user: userWithRole };
+        } catch (sessionError) {
+            console.error('Error al crear sesión:', sessionError);
+            if (sessionError.code === 401) {
+                throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+            } else if (sessionError.code === 403) {
+                throw new Error('Acceso denegado. Por favor, verifica que tienes permisos para acceder.');
+            } else if (sessionError.code === 429) {
+                throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
+            } else {
+                throw new Error(`Error al iniciar sesión: ${sessionError.message}`);
+            }
+        }
     } catch (error) {
         console.error('Error detallado en login:', error);
         
         // Manejo específico de errores
-        if (error.code === 401) {
-            throw new Error('Credenciales inválidas');
-        } else if (error.code === 403) {
-            throw new Error('Acceso denegado. Verifica tus permisos.');
-        } else if (error.code === 429) {
-            throw new Error('Demasiados intentos. Por favor, espera unos minutos.');
-        } else if (error.message.includes('CORS')) {
+        if (error.message.includes('CORS')) {
             throw new Error('Error de configuración CORS. Por favor, contacta al administrador.');
         } else if (error.message.includes('Network request failed')) {
-            throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
+            throw new Error('Error de conexión con el servidor. Por favor, verifica tu conexión a internet y que el servidor esté disponible.');
+        } else if (error.message.includes('Failed to fetch')) {
+            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.');
         } else {
-            throw new Error('Error al iniciar sesión. Por favor, intenta nuevamente.');
+            throw new Error(error.message || 'Error al iniciar sesión. Por favor, intenta nuevamente.');
         }
     }
 };
