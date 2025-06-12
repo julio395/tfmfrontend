@@ -10,8 +10,7 @@ const APPWRITE_PROJECT_ID = '683f418d003d466cfe2e';
 // Configurar el cliente de Appwrite
 client
     .setEndpoint(APPWRITE_ENDPOINT)
-    .setProject(APPWRITE_PROJECT_ID)
-    .setLocale('es');
+    .setProject(APPWRITE_PROJECT_ID);
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
