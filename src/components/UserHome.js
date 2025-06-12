@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 import AuditoriaCuestionario from './AuditoriaCuestionario';
-import Navbar from './Navbar.js';
+import Navbar from './Navbar';
 import '../styles/UserHome.css';
 import { useNavigate } from 'react-router-dom';
 import { account } from '../appwrite/appwrite';
@@ -15,17 +15,22 @@ const UserHome = ({ userData, onLogout }) => {
     setMostrarCuestionario(true);
   };
 
-  const handleCancelarAuditoria = () => {
+  const handleFinalizarAuditoria = () => {
     setMostrarCuestionario(false);
   };
 
   const handleLogout = async () => {
     try {
-      await account.deleteSession('current');
-      onLogout();
+      // Primero navegamos al login
       navigate('/login');
+      // Luego cerramos la sesión
+      await account.deleteSession('current');
+      // Finalmente actualizamos el estado
+      onLogout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
+      // Aún así navegamos al login
+      navigate('/login');
     }
   };
 
@@ -86,32 +91,58 @@ const UserHome = ({ userData, onLogout }) => {
       <Navbar userData={userData} role="user" onLogout={handleLogout} />
       
       <main style={{ padding: '2rem' }}>
-        {!mostrarCuestionario ? (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h4" gutterBottom>
-              Bienvenido al Sistema de Auditoría
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Este sistema le ayudará a realizar una auditoría completa de sus activos de seguridad.
-            </Typography>
-            
-            {renderRadarChart()}
+        <div className="dashboard-container">
+          <div className="dashboard-header">
+            <h1>Panel de Usuario</h1>
+            <p>Bienvenido, {userData.name}</p>
+          </div>
 
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
+          <div className="dashboard-actions">
+            <button 
+              className="action-button"
               onClick={handleComenzarAuditoria}
             >
-              Comenzar Auditoría
-            </Button>
-          </Paper>
-        ) : (
-          <AuditoriaCuestionario 
-            onCancel={handleCancelarAuditoria} 
-            userData={userData}
-          />
-        )}
+              Comenzar Nueva Auditoría
+            </button>
+            <button 
+              className="action-button"
+              onClick={() => navigate('/auditorias')}
+            >
+              Documentos de Auditorías
+            </button>
+          </div>
+
+          {mostrarCuestionario && (
+            <div className="cuestionario-container">
+              {!mostrarCuestionario ? (
+                <Paper sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography variant="h4" gutterBottom>
+                    Bienvenido al Sistema de Auditoría
+                  </Typography>
+                  <Typography variant="body1" paragraph>
+                    Este sistema le ayudará a realizar una auditoría completa de sus activos de seguridad.
+                  </Typography>
+                  
+                  {renderRadarChart()}
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    onClick={handleComenzarAuditoria}
+                  >
+                    Comenzar Auditoría
+                  </Button>
+                </Paper>
+              ) : (
+                <AuditoriaCuestionario 
+                  onCancel={handleFinalizarAuditoria} 
+                  userData={userData}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
