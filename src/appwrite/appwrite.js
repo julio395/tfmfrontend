@@ -2,7 +2,7 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 
 // Configuración del cliente de Appwrite
 const client = new Client()
-    .setEndpoint('https://cloud.appwrite.io/v1')
+    .setEndpoint('https://appwrite-tfm.julio.coolify.hgccarlos.es/v1')
     .setProject('683f418d003d466cfe2e')
     .setLocale('es');
 
@@ -53,13 +53,13 @@ const checkAppwriteConnection = async () => {
     try {
         console.log('Verificando conexión con Appwrite...');
         console.log('Configuración actual:', {
-            endpoint: 'https://cloud.appwrite.io/v1',
+            endpoint: 'https://appwrite-tfm.julio.coolify.hgccarlos.es/v1',
             projectId: '683f418d003d466cfe2e'
         });
         
-        // Intentar obtener la información del proyecto
-        const project = await client.getProject();
-        console.log('Conexión con Appwrite verificada correctamente:', project);
+        // Intentar obtener la información de la cuenta
+        const user = await account.get();
+        console.log('Conexión con Appwrite verificada correctamente');
         return true;
     } catch (error) {
         console.error('Error al verificar conexión:', error);
