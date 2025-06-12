@@ -19,6 +19,8 @@
     "NODE_ENV": "production",
     "NPM_CONFIG_PREFER_OFFLINE": "true",
     "CI": "false",
-    "GENERATE_SOURCEMAP": "false"
+    "GENERATE_SOURCEMAP": "false",
+    "REACT_APP_PLATFORM": "web",
+    "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es"
   }
 } 

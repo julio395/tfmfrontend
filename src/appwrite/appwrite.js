@@ -88,8 +88,10 @@ export const loginUser = async (email, password) => {
             throw new Error('Demasiados intentos. Por favor, espera unos minutos.');
         } else if (error.message.includes('CORS')) {
             throw new Error('Error de configuración CORS. Por favor, contacta al administrador.');
+        } else if (error.message.includes('Network request failed')) {
+            throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
         } else {
-            throw new Error('Error al iniciar sesión. Por favor, verifica tu conexión e intenta nuevamente.');
+            throw new Error('Error al iniciar sesión. Por favor, intenta nuevamente.');
         }
     }
 };
