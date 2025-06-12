@@ -51,8 +51,8 @@ export const createUser = async (email, password, name) => {
 export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
-        console.log('Endpoint:', client.getEndpoint());
-        console.log('Project ID:', client.getProject());
+        console.log('Endpoint:', 'https://cloud.appwrite.io/v1');
+        console.log('Project ID:', '67c8c0c0c0c0c0c0c0c0c0c0');
 
         // Verificar conexión con Appwrite
         try {
