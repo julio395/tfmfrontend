@@ -19,9 +19,7 @@
     "REACT_APP_PLATFORM": "web",
     "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
     "REACT_APP_APPWRITE_PLATFORM": "web",
-    "REACT_APP_APPWRITE_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
-    "REACT_APP_APPWRITE_ALLOW_SELF_SIGNED": "true",
-    "REACT_APP_APPWRITE_CORS_ENABLED": "true"
+    "REACT_APP_APPWRITE_HOST": "https://projectfm.julio.coolify.hgccarlos.es"
   },
   "headers": {
     "Access-Control-Allow-Origin": "*",
