@@ -11,7 +11,7 @@
   "restartPolicyMaxRetries": 10,
   "env": {
     "REACT_APP_APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
-    "REACT_APP_APPWRITE_PROJECT_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
+    "REACT_APP_APPWRITE_PROJECT_ID": "683f418d003d466cfe2e",
     "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es/api/tfm",
     "NODE_ENV": "production",
     "CI": "false",

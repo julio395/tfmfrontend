@@ -3,7 +3,7 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 // Configuración del cliente de Appwrite
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('67c8c0c0c0c0c0c0c0c0c0c0')
+    .setProject('683f418d003d466cfe2e')
     .setLocale('es');
 
 // Crear instancias de los servicios de Appwrite
@@ -52,7 +52,7 @@ export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
         console.log('Endpoint:', 'https://cloud.appwrite.io/v1');
-        console.log('Project ID:', '67c8c0c0c0c0c0c0c0c0c0c0');
+        console.log('Project ID:', '683f418d003d466cfe2e');
 
         // Verificar conexión con Appwrite
         try {
