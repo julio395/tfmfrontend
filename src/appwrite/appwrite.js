@@ -12,7 +12,10 @@ const databases = new Databases(client);
 const storage = new Storage(client);
 
 // Configuración de la API de MongoDB
-const MONGODB_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const isDevelopment = window.location.hostname === 'localhost';
+export const MONGODB_API_URL = isDevelopment 
+    ? 'http://localhost:3001/api/tfm'
+    : 'https://projectfm.julio.coolify.hgccarlos.es/api/tfm';
 
 export const createUser = async (email, password, name) => {
     try {
