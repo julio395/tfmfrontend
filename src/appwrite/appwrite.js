@@ -3,7 +3,9 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 // Configuración de Appwrite usando variables de entorno
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('67c8c0c0c0c0c0c0c0c0c0c0');
+    .setProject('67c8c0c0c0c0c0c0c0c0c0c0')
+    .setLocale('es')
+    .setSelfSigned(true);
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);

@@ -12,17 +12,20 @@
   "env": {
     "REACT_APP_APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
     "REACT_APP_APPWRITE_PROJECT_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
-    "REACT_APP_APPWRITE_DATABASE_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
-    "REACT_APP_APPWRITE_COLLECTION_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
-    "REACT_APP_APPWRITE_BUCKET_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
     "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es/api/tfm",
     "NODE_ENV": "production",
-    "NPM_CONFIG_PREFER_OFFLINE": "true",
     "CI": "false",
     "GENERATE_SOURCEMAP": "false",
     "REACT_APP_PLATFORM": "web",
     "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
     "REACT_APP_APPWRITE_PLATFORM": "web",
-    "REACT_APP_APPWRITE_HOST": "https://projectfm.julio.coolify.hgccarlos.es"
+    "REACT_APP_APPWRITE_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
+    "REACT_APP_APPWRITE_ALLOW_SELF_SIGNED": "true",
+    "REACT_APP_APPWRITE_CORS_ENABLED": "true"
+  },
+  "headers": {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization"
   }
 } 
