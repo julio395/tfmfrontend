@@ -61,21 +61,18 @@ export const loginUser = async (email, password) => {
         const user = await account.get();
         console.log('Información del usuario obtenida:', user);
 
-        // Verificamos si el usuario es admin
-        console.log('Verificando permisos de administrador...');
-        const userTeams = await teams.list();
-        console.log('Equipos del usuario:', userTeams);
+        // Verificamos el rol del usuario basado en las etiquetas
+        console.log('Verificando rol del usuario...');
+        const isAdmin = user.labels && user.labels.includes('admin');
         
-        const isAdmin = userTeams.teams.some(team => team.name === 'admin');
-        if (!isAdmin) {
-            console.log('Usuario no tiene permisos de administrador');
-            // Cerramos la sesión si no es admin
-            await account.deleteSession('current');
-            throw new Error('No tienes permisos de administrador');
-        }
+        // Si no tiene la etiqueta admin, es un usuario normal
+        const userWithRole = {
+            ...user,
+            role: isAdmin ? 'admin' : 'user'
+        };
 
-        console.log('Login completado exitosamente');
-        return { session, user };
+        console.log('Login completado exitosamente. Rol:', userWithRole.role);
+        return { session, user: userWithRole };
     } catch (error) {
         console.error('Error detallado en login:', error);
         

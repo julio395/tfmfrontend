@@ -2,21 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import AdminHome from './components/AdminHome';
-import { checkSession } from './appwrite/appwrite';
+import UserHome from './components/UserHome';
+import { checkSession, account } from './appwrite/appwrite';
 import './App.css';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkUser = async () => {
       try {
         const session = await checkSession();
-        setIsAuthenticated(!!session);
+        if (session) {
+          // Si hay sesión, obtener información del usuario
+          const userData = await account.get();
+          const isAdmin = userData.labels && userData.labels.includes('admin');
+          
+          setUser({
+            ...userData,
+            role: isAdmin ? 'admin' : 'user'
+          });
+        }
       } catch (error) {
         console.error('Error al verificar sesión:', error);
-        setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -35,15 +45,19 @@ function App() {
         <Routes>
           <Route 
             path="/login" 
-            element={!isAuthenticated ? <Login onLogin={() => setIsAuthenticated(true)} /> : <Navigate to="/admin" />} 
+            element={!user ? <Login onLogin={setUser} /> : <Navigate to={user.role === 'admin' ? "/admin" : "/home"} />} 
           />
           <Route 
             path="/admin" 
-            element={isAuthenticated ? <AdminHome /> : <Navigate to="/login" />} 
+            element={user?.role === 'admin' ? <AdminHome user={user} onLogout={() => setUser(null)} /> : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/home" 
+            element={user?.role === 'user' ? <UserHome user={user} onLogout={() => setUser(null)} /> : <Navigate to="/login" />} 
           />
           <Route 
             path="/" 
-            element={<Navigate to={isAuthenticated ? "/admin" : "/login"} />} 
+            element={<Navigate to={user ? (user.role === 'admin' ? "/admin" : "/home") : "/login"} />} 
           />
         </Routes>
       </div>
