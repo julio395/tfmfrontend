@@ -5,13 +5,16 @@ const Navbar = ({ userData, role, onLogout }) => {
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
+  const handleLogout = async (e) => {
+    e.preventDefault();
     try {
       await onLogout();
-      navigate('/login', { replace: true });
+      // Forzar la redirección al login
+      window.location.href = '/login';
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-      navigate('/login', { replace: true });
+      // Incluso si hay error, forzamos la redirección
+      window.location.href = '/login';
     }
   };
 
