@@ -21,6 +21,8 @@
     "CI": "false",
     "GENERATE_SOURCEMAP": "false",
     "REACT_APP_PLATFORM": "web",
-    "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es"
+    "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
+    "REACT_APP_APPWRITE_PLATFORM": "web",
+    "REACT_APP_APPWRITE_HOST": "https://projectfm.julio.coolify.hgccarlos.es"
   }
 } 
