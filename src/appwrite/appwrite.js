@@ -48,20 +48,41 @@ export const createUser = async (email, password, name) => {
     }
 };
 
+// Función para verificar la conexión con Appwrite
+const checkAppwriteConnection = async () => {
+    try {
+        console.log('Verificando conexión con Appwrite...');
+        console.log('Configuración actual:', {
+            endpoint: 'https://cloud.appwrite.io/v1',
+            projectId: '683f418d003d466cfe2e'
+        });
+        
+        // Intentar una petición simple
+        const response = await fetch('https://cloud.appwrite.io/v1/health', {
+            method: 'GET',
+            headers: {
+                'X-Appwrite-Project': '683f418d003d466cfe2e'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+        }
+        
+        console.log('Conexión con Appwrite verificada correctamente');
+        return true;
+    } catch (error) {
+        console.error('Error al verificar conexión:', error);
+        throw new Error(`Error de conexión con Appwrite: ${error.message}`);
+    }
+};
+
 export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
-        console.log('Endpoint:', 'https://cloud.appwrite.io/v1');
-        console.log('Project ID:', '683f418d003d466cfe2e');
-
-        // Verificar conexión con Appwrite
-        try {
-            await account.get();
-            console.log('Conexión con Appwrite establecida correctamente');
-        } catch (error) {
-            console.error('Error al verificar conexión con Appwrite:', error);
-            throw new Error('No se pudo establecer conexión con el servidor de autenticación');
-        }
+        
+        // Verificar conexión primero
+        await checkAppwriteConnection();
 
         // Intentar login
         console.log('Intentando login con email:', email);
@@ -94,6 +115,8 @@ export const loginUser = async (email, password) => {
             throw new Error('Error de conexión con el servidor. Por favor, verifica tu conexión a internet y que el servidor esté disponible.');
         } else if (error.message.includes('CORS')) {
             throw new Error('Error de configuración del servidor. Por favor, contacta al administrador.');
+        } else if (error.message.includes('Failed to fetch')) {
+            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.');
         } else {
             throw new Error('Error al iniciar sesión: ' + (error.message || 'Error desconocido'));
         }
