@@ -3,8 +3,12 @@
   "type": "web",
   "framework": "react",
   "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
-  "installCommand": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --no-audit --no-fund --prefer-offline",
+  "installCommand": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --no-audit --no-fund",
   "startCommand": "serve -s build",
+  "healthcheckPath": "/",
+  "healthcheckTimeout": 300,
+  "restartPolicyType": "on-failure",
+  "restartPolicyMaxRetries": 10,
   "env": {
     "REACT_APP_APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
     "REACT_APP_APPWRITE_PROJECT_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
