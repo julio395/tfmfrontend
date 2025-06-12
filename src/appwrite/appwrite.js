@@ -82,10 +82,24 @@ export const loginUser = async (email, password) => {
 
         // Intentar login
         console.log('Intentando login con email:', email);
-        const session = await account.createEmailSession(email, password);
-        console.log('Sesión creada:', session);
+        try {
+            const session = await account.createEmailSession(email, password);
+            console.log('Sesión creada:', session);
+        } catch (loginError) {
+            console.error('Error específico en login:', loginError);
+            if (loginError.code === 401) {
+                throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+            } else if (loginError.code === 403) {
+                throw new Error('Acceso denegado. Por favor, contacta al administrador.');
+            } else if (loginError.code === 429) {
+                throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
+            } else {
+                throw new Error(`Error al iniciar sesión: ${loginError.message}`);
+            }
+        }
 
         // Obtener información del usuario
+        console.log('Obteniendo información del usuario...');
         const user = await account.get();
         console.log('Información del usuario obtenida:', user);
 
@@ -93,29 +107,33 @@ export const loginUser = async (email, password) => {
         const isAdmin = user.labels && user.labels.includes('admin');
         console.log('¿Es admin?:', isAdmin);
 
+        // Si no es admin, verificar que sea un usuario normal
+        if (!isAdmin) {
+            console.log('Verificando permisos de usuario normal...');
+            try {
+                // Intentar obtener la lista de equipos del usuario
+                const teams = await account.listTeams();
+                console.log('Equipos del usuario:', teams);
+                
+                // Verificar si el usuario pertenece al equipo de usuarios normales
+                const isNormalUser = teams.teams.some(team => team.name === 'users');
+                if (!isNormalUser) {
+                    console.log('Usuario no pertenece al equipo de usuarios normales');
+                    throw new Error('No tienes permisos para acceder a esta aplicación.');
+                }
+            } catch (teamError) {
+                console.error('Error al verificar equipos:', teamError);
+                throw new Error('Error al verificar permisos de usuario. Por favor, contacta al administrador.');
+            }
+        }
+
         return {
             ...user,
             role: isAdmin ? 'admin' : 'user'
         };
     } catch (error) {
         console.error('Error detallado en login:', error);
-        
-        // Manejar errores específicos
-        if (error.code === 401) {
-            throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-        } else if (error.code === 403) {
-            throw new Error('Acceso denegado. Por favor, contacta al administrador.');
-        } else if (error.code === 429) {
-            throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
-        } else if (error.message.includes('Network request failed')) {
-            throw new Error('Error de conexión con el servidor. Por favor, verifica tu conexión a internet y que el servidor esté disponible.');
-        } else if (error.message.includes('CORS')) {
-            throw new Error('Error de configuración del servidor. Por favor, contacta al administrador.');
-        } else if (error.message.includes('Failed to fetch')) {
-            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.');
-        } else {
-            throw new Error('Error al iniciar sesión: ' + (error.message || 'Error desconocido'));
-        }
+        throw error; // Re-lanzar el error para que sea manejado por el componente
     }
 };
 
