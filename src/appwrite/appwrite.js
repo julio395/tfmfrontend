@@ -1,15 +1,15 @@
-import { Client, Account, ID, Databases, Storage, Teams } from 'appwrite';
+import { Client, Account, Teams, Databases, Storage } from 'appwrite';
 
 // Configuración de Appwrite
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('664a1c2c0030c2a0c4c9');
+    .setProject('67c8c0c0c0c0c0c0c0c0c0c0');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
+const teams = new Teams(client);
 const databases = new Databases(client);
 const storage = new Storage(client);
-const teams = new Teams(client);
 
 // Configuración de la API de MongoDB
 const isDevelopment = window.location.hostname === 'localhost';
@@ -34,10 +34,23 @@ export const createUser = async (email, password, name) => {
 
 export const loginUser = async (email, password) => {
     try {
+        // Intentar crear la sesión
         const session = await account.createEmailSession(email, password);
-        return session;
+        
+        // Obtener información del usuario
+        const user = await account.get();
+        
+        // Verificar si el usuario es admin
+        const userTeams = await teams.list();
+        const isAdmin = userTeams.teams.some(team => team.name === 'admin');
+        
+        if (!isAdmin) {
+            throw new Error('No tienes permisos de administrador');
+        }
+        
+        return { session, user };
     } catch (error) {
-        console.error('Error logging in:', error);
+        console.error('Error en login:', error);
         throw error;
     }
 };
@@ -67,106 +80,101 @@ export const getUsers = async () => {
         return response.teams.map(team => ({
             id: team.$id,
             name: team.name,
-            role: team.roles[0] || 'user',
+            role: team.role,
             status: team.status
         }));
     } catch (error) {
-        console.error('Error getting users:', error);
+        console.error('Error al obtener usuarios:', error);
         throw error;
     }
 };
 
 export const createDocument = async (collectionId, data) => {
     try {
-        const response = await databases.createDocument(
-            '664a1c2c0030c2a0c4c9',
+        return await databases.createDocument(
+            '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
-            ID.unique(),
+            'unique()',
             data
         );
-        return response;
     } catch (error) {
-        console.error('Error creating document:', error);
+        console.error('Error al crear documento:', error);
         throw error;
     }
 };
 
 export const getDocuments = async (collectionId) => {
     try {
-        const response = await databases.listDocuments(
-            '664a1c2c0030c2a0c4c9',
+        return await databases.listDocuments(
+            '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId
         );
-        return response.documents;
     } catch (error) {
-        console.error('Error getting documents:', error);
+        console.error('Error al obtener documentos:', error);
         throw error;
     }
 };
 
 export const updateDocument = async (collectionId, documentId, data) => {
     try {
-        const response = await databases.updateDocument(
-            '664a1c2c0030c2a0c4c9',
+        return await databases.updateDocument(
+            '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
             documentId,
             data
         );
-        return response;
     } catch (error) {
-        console.error('Error updating document:', error);
+        console.error('Error al actualizar documento:', error);
         throw error;
     }
 };
 
 export const deleteDocument = async (collectionId, documentId) => {
     try {
-        await databases.deleteDocument(
-            '664a1c2c0030c2a0c4c9',
+        return await databases.deleteDocument(
+            '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
             documentId
         );
     } catch (error) {
-        console.error('Error deleting document:', error);
+        console.error('Error al eliminar documento:', error);
         throw error;
     }
 };
 
-export const uploadFile = async (file) => {
+export const uploadFile = async (bucketId, file) => {
     try {
-        const response = await storage.createFile(
-            '664a1c2c0030c2a0c4c9',
-            ID.unique(),
+        return await storage.createFile(
+            bucketId,
+            'unique()',
             file
         );
-        return response;
     } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error('Error al subir archivo:', error);
         throw error;
     }
 };
 
-export const getFile = async (fileId) => {
+export const getFile = async (bucketId, fileId) => {
     try {
-        const response = await storage.getFile(
-            '664a1c2c0030c2a0c4c9',
+        return await storage.getFile(
+            bucketId,
             fileId
         );
-        return response;
     } catch (error) {
-        console.error('Error getting file:', error);
+        console.error('Error al obtener archivo:', error);
         throw error;
     }
 };
 
-export const deleteFile = async (fileId) => {
+export const deleteFile = async (bucketId, fileId) => {
     try {
-        await storage.deleteFile(
-            '664a1c2c0030c2a0c4c9',
+        return await storage.deleteFile(
+            bucketId,
             fileId
         );
     } catch (error) {
-        console.error('Error deleting file:', error);
+        console.error('Error al eliminar archivo:', error);
         throw error;
     }
 };
@@ -259,4 +267,4 @@ export const deleteMongoDBItem = async (collection, id) => {
 };
 
 // Exportar las instancias de Appwrite
-export { client, account, ID }; 
+export { client, account, teams, databases, storage }; 
