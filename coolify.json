@@ -1,29 +1,26 @@
 {
-  "name": "tfm",
-  "type": "web",
+  "name": "tfm-frontend",
+  "type": "static",
   "framework": "react",
-  "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
-  "installCommand": "rm -rf node_modules package-lock.json && npm install --legacy-peer-deps --no-audit --no-fund",
-  "startCommand": "serve -s build",
-  "healthcheckPath": "/",
-  "healthcheckTimeout": 300,
-  "restartPolicyType": "on-failure",
-  "restartPolicyMaxRetries": 10,
-  "env": {
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
+  "environment": {
+    "REACT_APP_API_URL": "https://backend-tfm.julio.coolify.hgccarlos.es",
     "REACT_APP_APPWRITE_ENDPOINT": "https://appwrite-tfm.julio.coolify.hgccarlos.es/v1",
     "REACT_APP_APPWRITE_PROJECT_ID": "683f418d003d466cfe2e",
-    "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es/api/tfm",
-    "NODE_ENV": "production",
-    "CI": "false",
-    "GENERATE_SOURCEMAP": "false",
-    "REACT_APP_PLATFORM": "web",
-    "REACT_APP_HOST": "https://projectfm.julio.coolify.hgccarlos.es",
-    "REACT_APP_APPWRITE_PLATFORM": "web",
-    "REACT_APP_APPWRITE_HOST": "https://appwrite-tfm.julio.coolify.hgccarlos.es"
+    "REACT_APP_APPWRITE_DATABASE_ID": "683f418d003d466cfe2e",
+    "REACT_APP_APPWRITE_COLLECTION_ID": "683f418d003d466cfe2e",
+    "REACT_APP_APPWRITE_BUCKET_ID": "683f418d003d466cfe2e",
+    "REACT_APP_APPWRITE_TEAM_ID": "683f418d003d466cfe2e"
   },
-  "headers": {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"
+  "ports": {
+    "80": "80"
+  },
+  "healthcheck": {
+    "path": "/",
+    "interval": 30,
+    "timeout": 10,
+    "retries": 3
   }
 } 

@@ -3,6 +3,8 @@ import { Box, Typography, TextField, Button, Slider, Select, MenuItem, FormContr
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const [activos, setActivos] = useState([]);
     const [categorias, setCategorias] = useState([]);
@@ -37,7 +39,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
             try {
                 // Primero intentamos obtener la auditoría en progreso del usuario
-                const response = await axios.get(`http://localhost:5000/api/auditoria/en-progreso/${userData.$id}`);
+                const response = await axios.get(`${API_URL}/api/auditoria/en-progreso/${userData.$id}`);
                 
                 if (response.data && response.data._id) {
                     setAuditoriaId(response.data._id);
@@ -69,13 +71,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 }
                 setBorradoresCargados(true);
             } catch (error) {
-                // Si el error es 404, significa que no hay auditoría en progreso, lo cual es normal
-                if (error.response && error.response.status === 404) {
-                    console.log('No hay auditoría en progreso, se iniciará una nueva');
-                    setBorradoresCargados(true);
-                } else {
-                    console.error('Error al cargar respuestas de la auditoría:', error);
-                }
+                console.error('Error al cargar respuestas guardadas:', error);
             }
         };
 
@@ -98,7 +94,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     useEffect(() => {
         const fetchActivos = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/tfm/Activos/all');
+                const response = await axios.get(`${API_URL}/api/tfm/Activos/all`);
                 
                 if (!response.data || !Array.isArray(response.data)) {
                     setError('Formato de datos inválido recibido del servidor');
@@ -175,6 +171,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 setLoading(false);
             } catch (error) {
+                console.error('Error al cargar activos:', error);
                 setError('Error al cargar los activos. Por favor, intente nuevamente.');
                 setLoading(false);
             }
@@ -249,10 +246,10 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
             let response;
             // Si ya existe una auditoría en progreso, actualizamos
             if (auditoriaId) {
-                response = await axios.put(`http://localhost:5000/api/auditoria/${auditoriaId}`, dataToSend);
+                response = await axios.put(`${API_URL}/api/auditoria/${auditoriaId}`, dataToSend);
             } else {
                 // Si no existe, creamos una nueva
-                response = await axios.post('http://localhost:5000/api/auditoria/en-progreso', dataToSend);
+                response = await axios.post(`${API_URL}/api/auditoria/en-progreso`, dataToSend);
                 if (response.data && response.data._id) {
                     setAuditoriaId(response.data._id);
                 }
@@ -302,7 +299,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 ultimaModificacion: new Date().toISOString()
             };
 
-            const response = await axios.put(`http://localhost:5000/api/auditoria/${auditoriaId}/finalizar`, dataToSend);
+            const response = await axios.put(`${API_URL}/api/auditoria/${auditoriaId}/finalizar`, dataToSend);
             
             if (response.data) {
                 alert('Auditoría finalizada correctamente');
