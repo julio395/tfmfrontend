@@ -2,8 +2,10 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 
 // Configuración de Appwrite usando variables de entorno
 const client = new Client()
-    .setEndpoint(process.env.REACT_APP_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1')
-    .setProject(process.env.REACT_APP_APPWRITE_PROJECT_ID || '67c8c0c0c0c0c0c0c0c0c0c0');
+    .setEndpoint('https://cloud.appwrite.io/v1')
+    .setProject('67c8c0c0c0c0c0c0c0c0c0c0')
+    .setLocale('es')
+    .setSelfSigned(true); // Permitir certificados autofirmados en desarrollo
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
@@ -34,14 +36,18 @@ export const createUser = async (email, password, name) => {
 
 export const loginUser = async (email, password) => {
     try {
+        console.log('Intentando iniciar sesión con:', email);
         // Intentar crear la sesión
         const session = await account.createEmailSession(email, password);
+        console.log('Sesión creada:', session);
         
         // Obtener información del usuario
         const user = await account.get();
+        console.log('Usuario obtenido:', user);
         
         // Verificar si el usuario es admin
         const userTeams = await teams.list();
+        console.log('Equipos del usuario:', userTeams);
         const isAdmin = userTeams.teams.some(team => team.name === 'admin');
         
         if (!isAdmin) {
@@ -50,8 +56,14 @@ export const loginUser = async (email, password) => {
         
         return { session, user };
     } catch (error) {
-        console.error('Error en login:', error);
-        throw error;
+        console.error('Error detallado en login:', error);
+        if (error.code === 401) {
+            throw new Error('Credenciales inválidas');
+        } else if (error.code === 429) {
+            throw new Error('Demasiados intentos. Por favor, espera unos minutos.');
+        } else {
+            throw new Error('Error al iniciar sesión. Por favor, verifica tu conexión e intenta nuevamente.');
+        }
     }
 };
 
@@ -85,7 +97,7 @@ export const getUsers = async () => {
         }));
     } catch (error) {
         console.error('Error al obtener usuarios:', error);
-        throw error;
+        throw new Error('Error al obtener la lista de usuarios. Por favor, intenta nuevamente.');
     }
 };
 
@@ -99,7 +111,7 @@ export const createDocument = async (collectionId, data) => {
         );
     } catch (error) {
         console.error('Error al crear documento:', error);
-        throw error;
+        throw new Error('Error al crear el documento. Por favor, intenta nuevamente.');
     }
 };
 
@@ -111,7 +123,7 @@ export const getDocuments = async (collectionId) => {
         );
     } catch (error) {
         console.error('Error al obtener documentos:', error);
-        throw error;
+        throw new Error('Error al obtener los documentos. Por favor, intenta nuevamente.');
     }
 };
 
@@ -125,7 +137,7 @@ export const updateDocument = async (collectionId, documentId, data) => {
         );
     } catch (error) {
         console.error('Error al actualizar documento:', error);
-        throw error;
+        throw new Error('Error al actualizar el documento. Por favor, intenta nuevamente.');
     }
 };
 
@@ -138,7 +150,7 @@ export const deleteDocument = async (collectionId, documentId) => {
         );
     } catch (error) {
         console.error('Error al eliminar documento:', error);
-        throw error;
+        throw new Error('Error al eliminar el documento. Por favor, intenta nuevamente.');
     }
 };
 
@@ -151,7 +163,7 @@ export const uploadFile = async (bucketId, file) => {
         );
     } catch (error) {
         console.error('Error al subir archivo:', error);
-        throw error;
+        throw new Error('Error al subir el archivo. Por favor, intenta nuevamente.');
     }
 };
 
@@ -163,7 +175,7 @@ export const getFile = async (bucketId, fileId) => {
         );
     } catch (error) {
         console.error('Error al obtener archivo:', error);
-        throw error;
+        throw new Error('Error al obtener el archivo. Por favor, intenta nuevamente.');
     }
 };
 
@@ -175,7 +187,7 @@ export const deleteFile = async (bucketId, fileId) => {
         );
     } catch (error) {
         console.error('Error al eliminar archivo:', error);
-        throw error;
+        throw new Error('Error al eliminar el archivo. Por favor, intenta nuevamente.');
     }
 };
 
