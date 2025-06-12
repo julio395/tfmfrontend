@@ -51,56 +51,51 @@ export const createUser = async (email, password, name) => {
 export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
-        console.log('Endpoint:', client.config.endpoint);
-        console.log('Project ID:', client.config.project);
-        
-        // Primero intentamos crear la sesión
-        console.log('Creando sesión...');
+        console.log('Endpoint:', client.getEndpoint());
+        console.log('Project ID:', client.getProject());
+
+        // Verificar conexión con Appwrite
         try {
-            const session = await account.createEmailSession(email, password);
-            console.log('Sesión creada exitosamente:', session);
-
-            // Luego obtenemos la información del usuario
-            console.log('Obteniendo información del usuario...');
-            const user = await account.get();
-            console.log('Información del usuario obtenida:', user);
-
-            // Verificamos el rol del usuario basado en las etiquetas
-            console.log('Verificando rol del usuario...');
-            const isAdmin = user.labels && user.labels.includes('admin');
-            
-            // Si no tiene la etiqueta admin, es un usuario normal
-            const userWithRole = {
-                ...user,
-                role: isAdmin ? 'admin' : 'user'
-            };
-
-            console.log('Login completado exitosamente. Rol:', userWithRole.role);
-            return { session, user: userWithRole };
-        } catch (sessionError) {
-            console.error('Error al crear sesión:', sessionError);
-            if (sessionError.code === 401) {
-                throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-            } else if (sessionError.code === 403) {
-                throw new Error('Acceso denegado. Por favor, verifica que tienes permisos para acceder.');
-            } else if (sessionError.code === 429) {
-                throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
-            } else {
-                throw new Error(`Error al iniciar sesión: ${sessionError.message}`);
-            }
+            await account.get();
+            console.log('Conexión con Appwrite establecida correctamente');
+        } catch (error) {
+            console.error('Error al verificar conexión con Appwrite:', error);
+            throw new Error('No se pudo establecer conexión con el servidor de autenticación');
         }
+
+        // Intentar login
+        console.log('Intentando login con email:', email);
+        const session = await account.createEmailSession(email, password);
+        console.log('Sesión creada:', session);
+
+        // Obtener información del usuario
+        const user = await account.get();
+        console.log('Información del usuario obtenida:', user);
+
+        // Verificar si el usuario tiene la etiqueta "admin"
+        const isAdmin = user.labels && user.labels.includes('admin');
+        console.log('¿Es admin?:', isAdmin);
+
+        return {
+            ...user,
+            role: isAdmin ? 'admin' : 'user'
+        };
     } catch (error) {
         console.error('Error detallado en login:', error);
         
-        // Manejo específico de errores
-        if (error.message.includes('CORS')) {
-            throw new Error('Error de configuración CORS. Por favor, contacta al administrador.');
+        // Manejar errores específicos
+        if (error.code === 401) {
+            throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        } else if (error.code === 403) {
+            throw new Error('Acceso denegado. Por favor, contacta al administrador.');
+        } else if (error.code === 429) {
+            throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
         } else if (error.message.includes('Network request failed')) {
             throw new Error('Error de conexión con el servidor. Por favor, verifica tu conexión a internet y que el servidor esté disponible.');
-        } else if (error.message.includes('Failed to fetch')) {
-            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión a internet.');
+        } else if (error.message.includes('CORS')) {
+            throw new Error('Error de configuración del servidor. Por favor, contacta al administrador.');
         } else {
-            throw new Error(error.message || 'Error al iniciar sesión. Por favor, intenta nuevamente.');
+            throw new Error('Error al iniciar sesión: ' + (error.message || 'Error desconocido'));
         }
     }
 };
