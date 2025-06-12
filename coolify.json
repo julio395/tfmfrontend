@@ -1,23 +1,25 @@
 {
-  "name": "tfm-app",
+  "name": "tfm",
+  "type": "static",
+  "framework": "react",
+  "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
+  "outputDirectory": "build",
+  "installCommand": "npm install",
   "environment": {
-    "REACT_APP_APPWRITE_ENDPOINT": "https://appwrite-tfm.julio.coolify.hgccarlos.es/v1",
-    "REACT_APP_APPWRITE_PROJECT_ID": "683f418d003d466cfe2e",
-    "MONGODB_URI": "mongodb://localhost:27017/tfm",
-    "MONGODB_DB_NAME": "tfm",
-    "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es"
+    "REACT_APP_APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
+    "REACT_APP_APPWRITE_PROJECT_ID": "664a1c2c0030c2a0c4c9",
+    "REACT_APP_APPWRITE_DATABASE_ID": "664a1c2c0030c2a0c4c9",
+    "REACT_APP_APPWRITE_COLLECTION_ID": "664a1c2c0030c2a0c4c9",
+    "REACT_APP_APPWRITE_BUCKET_ID": "664a1c2c0030c2a0c4c9",
+    "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es",
+    "REACT_APP_APPWRITE_API_URL": "https://cloud.appwrite.io/v1",
+    "GENERATE_SOURCEMAP": "false",
+    "NODE_ENV": "production"
   },
-  "build": {
-    "command": "npm run build",
-    "output": "build"
-  },
-  "deploy": {
-    "command": "npm start"
-  },
-  "databases": {
-    "mongodb": {
-      "version": "latest",
-      "port": 27017
+  "nixpacks": {
+    "start": "serve -s build",
+    "build": {
+      "command": "CI=false GENERATE_SOURCEMAP=false npm run build"
     }
   }
 } 
