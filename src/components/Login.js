@@ -1,28 +1,29 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { loginUser } from '../appwrite/appwrite';
 import './Login.css';
 
-function Login({ onLogin }) {
+const Login = ({ setUser }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setIsLoading(true);
+        setLoading(true);
 
         try {
-            console.log('Iniciando proceso de login...');
-            const result = await loginUser(email, password);
-            console.log('Login exitoso:', result);
-            onLogin();
+            const user = await loginUser(email, password);
+            setUser(user);
+            navigate(user.role === 'admin' ? '/admin' : '/home');
         } catch (error) {
             console.error('Error en login:', error);
-            setError(error.message || 'Error al iniciar sesión. Por favor, intenta nuevamente.');
+            setError(error.message);
         } finally {
-            setIsLoading(false);
+            setLoading(false);
         }
     };
 
@@ -33,34 +34,33 @@ function Login({ onLogin }) {
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label htmlFor="email">Email:</label>
+                        <label>Email:</label>
                         <input
                             type="email"
-                            id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            disabled={isLoading}
                         />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="password">Contraseña:</label>
+                        <label>Contraseña:</label>
                         <input
                             type="password"
-                            id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            disabled={isLoading}
                         />
                     </div>
-                    <button type="submit" disabled={isLoading}>
-                        {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                    <button type="submit" disabled={loading}>
+                        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                     </button>
                 </form>
+                <p className="register-link">
+                    ¿No tienes una cuenta? <Link to="/register">Regístrate</Link>
+                </p>
             </div>
         </div>
     );
-}
+};
 
 export default Login; 
