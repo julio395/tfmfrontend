@@ -17,18 +17,18 @@ const Login = ({ onLogin }) => {
         if (session) {
           const user = await account.get();
           if (user.labels?.includes('admin')) {
-            window.location.href = '/admin';
+            navigate('/admin', { replace: true });
           } else {
-            window.location.href = '/home';
+            navigate('/home', { replace: true });
           }
         }
       } catch (error) {
-        console.log('Error al verificar sesión:', error);
+        console.log('No hay sesión activa');
       }
     };
 
     checkSession();
-  }, []);
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,9 +42,9 @@ const Login = ({ onLogin }) => {
         if (existingSession) {
           const user = await account.get();
           if (user.labels?.includes('admin')) {
-            window.location.href = '/admin';
+            navigate('/admin', { replace: true });
           } else {
-            window.location.href = '/home';
+            navigate('/home', { replace: true });
           }
           return;
         }
@@ -62,9 +62,9 @@ const Login = ({ onLogin }) => {
 
       // Redirigir según el rol
       if (user.labels?.includes('admin')) {
-        window.location.href = '/admin';
+        navigate('/admin', { replace: true });
       } else {
-        window.location.href = '/home';
+        navigate('/home', { replace: true });
       }
     } catch (error) {
       console.error('Error en login:', error);

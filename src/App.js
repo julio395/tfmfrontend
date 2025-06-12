@@ -17,7 +17,7 @@ function App() {
       const session = await account.getSession('current');
       if (session) {
         const user = await account.get();
-        const isAdmin = user.labels.includes('admin');
+        const isAdmin = user.labels?.includes('admin');
         setUserData({ ...user, role: isAdmin ? 'admin' : 'user' });
       }
     } catch (error) {
@@ -33,7 +33,7 @@ function App() {
   }, []);
 
   const handleLogin = async (user) => {
-    const isAdmin = user.labels.includes('admin');
+    const isAdmin = user.labels?.includes('admin');
     setUserData({ ...user, role: isAdmin ? 'admin' : 'user' });
   };
 
@@ -62,7 +62,7 @@ function App() {
   }
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router>
       <Routes>
         <Route 
           path="/login" 
