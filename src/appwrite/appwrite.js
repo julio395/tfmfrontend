@@ -4,8 +4,7 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
     .setProject('67c8c0c0c0c0c0c0c0c0c0c0')
-    .setLocale('es')
-    .setSelfSigned(true); // Permitir certificados autofirmados en desarrollo
+    .setLocale('es');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
