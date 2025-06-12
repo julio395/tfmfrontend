@@ -49,27 +49,20 @@ export const createUser = async (email, password, name) => {
 };
 
 // Función para verificar la conexión con Appwrite
-const checkAppwriteConnection = async () => {
+export const checkAppwriteConnection = async () => {
     try {
         console.log('Verificando conexión con Appwrite...');
-        console.log('Configuración actual:', {
-            endpoint: 'https://appwrite-tfm.julio.coolify.hgccarlos.es/v1',
-            projectId: '683f418d003d466cfe2e'
-        });
+        console.log('Endpoint:', client.config.endpoint);
+        console.log('Project ID:', client.config.project);
         
-        // Intentar obtener la información de la cuenta
-        const user = await account.get();
-        console.log('Conexión con Appwrite verificada correctamente');
+        // Intentar obtener la sesión actual
+        const session = await account.getSession('current');
+        console.log('Sesión actual:', session);
+        
         return true;
     } catch (error) {
-        console.error('Error al verificar conexión:', error);
-        if (error.type === 'user_unauthorized') {
-            throw new Error('Error de autenticación con Appwrite. Por favor, verifica la configuración del proyecto.');
-        } else if (error.type === 'general_connection_refused') {
-            throw new Error('No se pudo conectar con el servidor de Appwrite. Por favor, verifica tu conexión a internet.');
-        } else {
-            throw new Error(`Error de conexión con Appwrite: ${error.message}`);
-        }
+        console.error('Error detallado en verificación:', error);
+        return false;
     }
 };
 
@@ -77,63 +70,38 @@ export const loginUser = async (email, password) => {
     try {
         console.log('Iniciando proceso de login...');
         
-        // Verificar conexión primero
-        await checkAppwriteConnection();
+        // Primero intentamos crear la sesión
+        const session = await account.createEmailSession(email, password);
+        console.log('Sesión creada:', session);
 
-        // Intentar login
-        console.log('Intentando login con email:', email);
-        try {
-            const session = await account.createEmailSession(email, password);
-            console.log('Sesión creada:', session);
-        } catch (loginError) {
-            console.error('Error específico en login:', loginError);
-            if (loginError.code === 401) {
-                throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-            } else if (loginError.code === 403) {
-                throw new Error('Acceso denegado. Por favor, contacta al administrador.');
-            } else if (loginError.code === 429) {
-                throw new Error('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
-            } else {
-                throw new Error(`Error al iniciar sesión: ${loginError.message}`);
-            }
-        }
+        // Esperamos un momento para asegurar que la sesión esté establecida
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Obtener información del usuario
-        console.log('Obteniendo información del usuario...');
-        const user = await account.get();
-        console.log('Información del usuario obtenida:', user);
+        // Ahora obtenemos los datos del usuario
+        const userData = await account.get();
+        console.log('Datos del usuario:', userData);
 
         // Verificar si el usuario tiene la etiqueta "admin"
-        const isAdmin = user.labels && user.labels.includes('admin');
-        console.log('¿Es admin?:', isAdmin);
-
-        // Si no es admin, verificar que sea un usuario normal
-        if (!isAdmin) {
-            console.log('Verificando permisos de usuario normal...');
-            try {
-                // Intentar obtener la lista de equipos del usuario
-                const teams = await account.listTeams();
-                console.log('Equipos del usuario:', teams);
-                
-                // Verificar si el usuario pertenece al equipo de usuarios normales
-                const isNormalUser = teams.teams.some(team => team.name === 'users');
-                if (!isNormalUser) {
-                    console.log('Usuario no pertenece al equipo de usuarios normales');
-                    throw new Error('No tienes permisos para acceder a esta aplicación.');
-                }
-            } catch (teamError) {
-                console.error('Error al verificar equipos:', teamError);
-                throw new Error('Error al verificar permisos de usuario. Por favor, contacta al administrador.');
-            }
-        }
-
+        const isAdmin = userData.labels && userData.labels.includes('admin');
+        
         return {
-            ...user,
+            ...userData,
             role: isAdmin ? 'admin' : 'user'
         };
     } catch (error) {
         console.error('Error detallado en login:', error);
-        throw error; // Re-lanzar el error para que sea manejado por el componente
+        
+        if (error.code === 401) {
+            throw new Error('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        } else if (error.code === 403) {
+            throw new Error('Acceso denegado. Por favor, verifica tus permisos.');
+        } else if (error.code === 429) {
+            throw new Error('Demasiados intentos. Por favor, espera un momento antes de intentar nuevamente.');
+        } else if (error.type === 'network') {
+            throw new Error('Error de conexión. Por favor, verifica tu conexión a internet.');
+        } else {
+            throw new Error('Error al iniciar sesión. Por favor, intenta nuevamente.');
+        }
     }
 };
 

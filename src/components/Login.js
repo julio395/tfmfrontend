@@ -16,9 +16,15 @@ const Login = ({ setUser }) => {
         setLoading(true);
 
         try {
-            const user = await loginUser(email, password);
-            setUser(user);
-            navigate(user.role === 'admin' ? '/admin' : '/home');
+            const userData = await loginUser(email, password);
+            setUser(userData);
+            
+            // Redirigir según el rol
+            if (userData.role === 'admin') {
+                navigate('/admin');
+            } else {
+                navigate('/home');
+            }
         } catch (error) {
             console.error('Error en login:', error);
             setError(error.message);
@@ -30,22 +36,24 @@ const Login = ({ setUser }) => {
     return (
         <div className="login-container">
             <div className="login-box">
-                <h2>Iniciar Sesión</h2>
+                <h1>Iniciar Sesión</h1>
                 {error && <div className="error-message">{error}</div>}
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Email:</label>
+                        <label htmlFor="email">Email:</label>
                         <input
                             type="email"
+                            id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
                     </div>
                     <div className="form-group">
-                        <label>Contraseña:</label>
+                        <label htmlFor="password">Contraseña:</label>
                         <input
                             type="password"
+                            id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
@@ -56,7 +64,7 @@ const Login = ({ setUser }) => {
                     </button>
                 </form>
                 <p className="register-link">
-                    ¿No tienes una cuenta? <Link to="/register">Regístrate</Link>
+                    ¿No tienes una cuenta? <Link to="/register">Regístrate aquí</Link>
                 </p>
             </div>
         </div>
