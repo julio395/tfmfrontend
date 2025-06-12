@@ -57,23 +57,19 @@ const checkAppwriteConnection = async () => {
             projectId: '683f418d003d466cfe2e'
         });
         
-        // Intentar una petición simple
-        const response = await fetch('https://cloud.appwrite.io/v1/health', {
-            method: 'GET',
-            headers: {
-                'X-Appwrite-Project': '683f418d003d466cfe2e'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Error en la respuesta del servidor: ${response.status}`);
-        }
-        
-        console.log('Conexión con Appwrite verificada correctamente');
+        // Intentar obtener la información del proyecto
+        const project = await client.getProject();
+        console.log('Conexión con Appwrite verificada correctamente:', project);
         return true;
     } catch (error) {
         console.error('Error al verificar conexión:', error);
-        throw new Error(`Error de conexión con Appwrite: ${error.message}`);
+        if (error.type === 'user_unauthorized') {
+            throw new Error('Error de autenticación con Appwrite. Por favor, verifica la configuración del proyecto.');
+        } else if (error.type === 'general_connection_refused') {
+            throw new Error('No se pudo conectar con el servidor de Appwrite. Por favor, verifica tu conexión a internet.');
+        } else {
+            throw new Error(`Error de conexión con Appwrite: ${error.message}`);
+        }
     }
 };
 
