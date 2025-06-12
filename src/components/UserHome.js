@@ -104,12 +104,6 @@ const UserHome = ({ userData, onLogout }) => {
             >
               Comenzar Nueva Auditoría
             </button>
-            <button 
-              className="action-button"
-              onClick={() => navigate('/auditorias')}
-            >
-              Documentos de Auditorías
-            </button>
           </div>
 
           {mostrarCuestionario && (

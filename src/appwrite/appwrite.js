@@ -117,11 +117,42 @@ export const getCurrentUser = async () => {
 
 export const logoutUser = async () => {
     try {
-        await account.deleteSession('current');
-        console.log('Sesión cerrada exitosamente');
+        console.log('Iniciando proceso de cierre de sesión...');
+        
+        // Primero intentamos eliminar la sesión actual
+        try {
+            const session = await account.getSession('current');
+            if (session) {
+                await account.deleteSession(session.$id);
+                console.log('Sesión eliminada correctamente');
+            }
+        } catch (sessionError) {
+            console.log('No se encontró sesión activa o ya fue eliminada');
+        }
+
+        // Limpiamos el estado local
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        
+        // Forzamos la limpieza de la sesión de Appwrite
+        await account.deleteSessions();
+        console.log('Todas las sesiones eliminadas');
+        
+        return true;
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
-        throw new Error('Error al cerrar sesión. Por favor, intenta nuevamente.');
+        console.error('Error detallado al cerrar sesión:', error);
+        
+        // Si hay un error, aún así limpiamos el estado local
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        
+        // Si el error es de permisos, lo manejamos específicamente
+        if (error.code === 401 || error.code === 403) {
+            console.log('Error de permisos al cerrar sesión, pero se limpió el estado local');
+            return true;
+        }
+        
+        throw error;
     }
 };
 

@@ -27,7 +27,7 @@ const Navbar = ({ userData, role, onLogout }) => {
       top: 0,
       zIndex: 1000
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+      <div style={{ display: 'flex', gap: '1rem' }}>
         {role === 'user' ? (
           <>
             <button 
@@ -49,7 +49,7 @@ const Navbar = ({ userData, role, onLogout }) => {
               Inicio
             </button>
             <button 
-              onClick={() => navigate('/audits')}
+              onClick={() => navigate('/auditorias')}
               style={{
                 background: 'none',
                 border: 'none',
