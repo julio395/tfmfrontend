@@ -1,4 +1,4 @@
-import { Client, Account, Teams, Databases, Storage } from 'appwrite';
+import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 
 // Configuración de Appwrite
 const client = new Client()
@@ -94,7 +94,7 @@ export const createDocument = async (collectionId, data) => {
         return await databases.createDocument(
             '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
-            'unique()',
+            ID.unique(),
             data
         );
     } catch (error) {
@@ -146,7 +146,7 @@ export const uploadFile = async (bucketId, file) => {
     try {
         return await storage.createFile(
             bucketId,
-            'unique()',
+            ID.unique(),
             file
         );
     } catch (error) {
@@ -267,4 +267,4 @@ export const deleteMongoDBItem = async (collection, id) => {
 };
 
 // Exportar las instancias de Appwrite
-export { client, account, teams, databases, storage }; 
+export { client, account, teams, databases, storage, ID }; 
