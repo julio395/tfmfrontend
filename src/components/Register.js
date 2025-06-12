@@ -20,7 +20,6 @@ const Register = ({ setUser }) => {
         setError('');
         setLoading(true);
 
-        // Validar que las contraseñas coincidan
         if (password !== confirmPassword) {
             setError('Las contraseñas no coinciden');
             setLoading(false);
@@ -28,54 +27,43 @@ const Register = ({ setUser }) => {
         }
 
         try {
-            // Crear el usuario en Appwrite
+            // Crear el usuario
             const user = await account.create(
                 ID.unique(),
                 email,
                 password,
                 name
             );
-            console.log('Usuario creado:', user);
 
             // Iniciar sesión automáticamente
-            const session = await account.createEmailSession(email, password);
-            console.log('Sesión creada:', session);
+            await account.createEmailSession(email, password);
 
-            // Esperar un momento para asegurar que la sesión esté establecida
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            try {
-                // Actualizar las preferencias del usuario
-                await account.updatePrefs({
-                    companyName,
-                    employees,
-                    sector,
-                    role: 'user'
-                });
-            } catch (prefsError) {
-                console.error('Error al actualizar preferencias:', prefsError);
-                // Si falla la actualización de preferencias, redirigimos al login
-                navigate('/login?message=Registro completado. Por favor, inicia sesión.');
-                return;
-            }
-
-            // Obtener información del usuario
+            // Obtener los datos del usuario
             const userData = await account.get();
+            
+            // Actualizar el estado con el usuario
             setUser({
                 ...userData,
-                role: 'user'
+                role: 'user' // Forzar el rol como 'user'
             });
 
-            // Redirigir al usuario a la página principal
+            // Guardar la información adicional en las preferencias del usuario
+            await account.updatePrefs({
+                companyName,
+                employees,
+                sector
+            });
+
+            // Redirigir al usuario a su página principal
             navigate('/home');
         } catch (error) {
             console.error('Error en registro:', error);
             if (error.code === 409) {
-                setError('Este email ya está registrado. Por favor, usa otro email o inicia sesión.');
+                setError('Este email ya está registrado');
             } else if (error.code === 400) {
-                setError('Por favor, verifica que todos los campos sean válidos.');
+                setError('Datos inválidos. Por favor, verifica la información');
             } else {
-                setError('Error al registrar usuario. Por favor, intenta nuevamente.');
+                setError('Error al registrar usuario. Por favor, intenta de nuevo');
             }
         } finally {
             setLoading(false);

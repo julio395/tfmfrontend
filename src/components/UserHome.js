@@ -4,9 +4,12 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend }
 import AuditoriaCuestionario from './AuditoriaCuestionario';
 import Navbar from './Navbar.js';
 import '../styles/UserHome.css';
+import { useNavigate } from 'react-router-dom';
+import { account } from '../appwrite/appwrite';
 
 const UserHome = ({ userData, onLogout }) => {
   const [mostrarCuestionario, setMostrarCuestionario] = useState(false);
+  const navigate = useNavigate();
 
   const handleComenzarAuditoria = () => {
     setMostrarCuestionario(true);
@@ -14,6 +17,16 @@ const UserHome = ({ userData, onLogout }) => {
 
   const handleCancelarAuditoria = () => {
     setMostrarCuestionario(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+      onLogout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
   };
 
   // Datos para el gráfico de araña
@@ -70,7 +83,7 @@ const UserHome = ({ userData, onLogout }) => {
 
   return (
     <div className="user-home">
-      <Navbar userData={userData} role="user" onLogout={onLogout} />
+      <Navbar userData={userData} role="user" onLogout={handleLogout} />
       
       <main style={{ padding: '2rem' }}>
         {!mostrarCuestionario ? (

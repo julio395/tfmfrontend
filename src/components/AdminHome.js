@@ -355,9 +355,19 @@ const AdminHome = ({ userData, onLogout }) => {
     </div>
   );
 
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+      onLogout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
+
   return (
     <div className="admin-container">
-      <Navbar userData={userData} onLogout={onLogout} />
+      <Navbar userData={userData} onLogout={handleLogout} />
       {isLoading ? (
         <div className="loading-container">
           <div className="loading-spinner"></div>
