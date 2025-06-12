@@ -20,7 +20,7 @@ const teams = new Teams(client);
 const isDevelopment = window.location.hostname === 'localhost';
 export const MONGODB_API_URL = isDevelopment 
     ? 'http://localhost:5000/api/tfm'
-    : 'http://5.135.131.59:5000/api/tfm';
+    : 'https://projectfm.julio.coolify.hgccarlos.es/api/tfm';
 
 // Función para obtener usuarios
 export const getUsers = async () => {
