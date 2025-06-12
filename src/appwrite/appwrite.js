@@ -3,8 +3,7 @@ import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 // Configuración de Appwrite usando variables de entorno
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('67c8c0c0c0c0c0c0c0c0c0c0')
-    .setLocale('es');
+    .setProject('67c8c0c0c0c0c0c0c0c0c0c0');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
@@ -25,7 +24,7 @@ export const checkSession = async () => {
         return session;
     } catch (error) {
         console.error('Error al verificar sesión:', error);
-        if (error.code === 401) {
+        if (error.code === 401 || error.code === 404) {
             // Sesión no válida o expirada
             return null;
         }
@@ -50,31 +49,45 @@ export const createUser = async (email, password, name) => {
 
 export const loginUser = async (email, password) => {
     try {
-        console.log('Intentando iniciar sesión con:', email);
-        // Intentar crear la sesión
+        console.log('Iniciando proceso de login...');
+        
+        // Primero intentamos crear la sesión
+        console.log('Creando sesión...');
         const session = await account.createEmailSession(email, password);
-        console.log('Sesión creada:', session);
-        
-        // Obtener información del usuario
+        console.log('Sesión creada exitosamente:', session);
+
+        // Luego obtenemos la información del usuario
+        console.log('Obteniendo información del usuario...');
         const user = await account.get();
-        console.log('Usuario obtenido:', user);
-        
-        // Verificar si el usuario es admin
+        console.log('Información del usuario obtenida:', user);
+
+        // Verificamos si el usuario es admin
+        console.log('Verificando permisos de administrador...');
         const userTeams = await teams.list();
         console.log('Equipos del usuario:', userTeams);
-        const isAdmin = userTeams.teams.some(team => team.name === 'admin');
         
+        const isAdmin = userTeams.teams.some(team => team.name === 'admin');
         if (!isAdmin) {
+            console.log('Usuario no tiene permisos de administrador');
+            // Cerramos la sesión si no es admin
+            await account.deleteSession('current');
             throw new Error('No tienes permisos de administrador');
         }
-        
+
+        console.log('Login completado exitosamente');
         return { session, user };
     } catch (error) {
         console.error('Error detallado en login:', error);
+        
+        // Manejo específico de errores
         if (error.code === 401) {
             throw new Error('Credenciales inválidas');
+        } else if (error.code === 403) {
+            throw new Error('Acceso denegado. Verifica tus permisos.');
         } else if (error.code === 429) {
             throw new Error('Demasiados intentos. Por favor, espera unos minutos.');
+        } else if (error.message.includes('CORS')) {
+            throw new Error('Error de configuración CORS. Por favor, contacta al administrador.');
         } else {
             throw new Error('Error al iniciar sesión. Por favor, verifica tu conexión e intenta nuevamente.');
         }

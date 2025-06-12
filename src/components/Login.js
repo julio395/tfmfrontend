@@ -1,39 +1,28 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { loginUser } from '../appwrite/appwrite';
-import '../styles/Login.css';
+import './Login.css';
 
-const Login = () => {
+function Login({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        setLoading(true);
+        setIsLoading(true);
 
         try {
-            const session = await loginUser(email, password);
-            console.log('Sesión iniciada:', session);
-            
-            // Redirigir al panel de administración
-            navigate('/admin');
+            console.log('Iniciando proceso de login...');
+            const result = await loginUser(email, password);
+            console.log('Login exitoso:', result);
+            onLogin();
         } catch (error) {
             console.error('Error en login:', error);
-            if (error.code === 401) {
-                setError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
-            } else if (error.code === 403) {
-                setError('No tienes permisos para acceder. Por favor, contacta al administrador.');
-            } else if (error.code === 429) {
-                setError('Demasiados intentos. Por favor, espera unos minutos antes de intentar nuevamente.');
-            } else {
-                setError('Error al iniciar sesión. Por favor, intenta nuevamente más tarde.');
-            }
+            setError(error.message || 'Error al iniciar sesión. Por favor, intenta nuevamente.');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -51,7 +40,7 @@ const Login = () => {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            disabled={loading}
+                            disabled={isLoading}
                         />
                     </div>
                     <div className="form-group">
@@ -62,16 +51,16 @@ const Login = () => {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            disabled={loading}
+                            disabled={isLoading}
                         />
                     </div>
-                    <button type="submit" disabled={loading}>
-                        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+                    <button type="submit" disabled={isLoading}>
+                        {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                     </button>
                 </form>
             </div>
         </div>
     );
-};
+}
 
 export default Login; 
