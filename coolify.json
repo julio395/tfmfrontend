@@ -11,6 +11,7 @@
     "REACT_APP_APPWRITE_DATABASE_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
     "REACT_APP_APPWRITE_COLLECTION_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
     "REACT_APP_APPWRITE_BUCKET_ID": "67c8c0c0c0c0c0c0c0c0c0c0",
+    "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es/api/tfm",
     "NODE_ENV": "production",
     "NPM_CONFIG_PREFER_OFFLINE": "true"
   }

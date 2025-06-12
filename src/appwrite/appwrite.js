@@ -1,9 +1,9 @@
 import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
 
-// Configuración de Appwrite
+// Configuración de Appwrite usando variables de entorno
 const client = new Client()
-    .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('67c8c0c0c0c0c0c0c0c0c0c0');
+    .setEndpoint(process.env.REACT_APP_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1')
+    .setProject(process.env.REACT_APP_APPWRITE_PROJECT_ID || '67c8c0c0c0c0c0c0c0c0c0c0');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
@@ -12,10 +12,7 @@ const databases = new Databases(client);
 const storage = new Storage(client);
 
 // Configuración de la API de MongoDB
-const isDevelopment = window.location.hostname === 'localhost';
-export const MONGODB_API_URL = isDevelopment 
-    ? 'http://localhost:5000/api/tfm'
-    : 'https://projectfm.julio.coolify.hgccarlos.es/api/tfm';
+const MONGODB_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 export const createUser = async (email, password, name) => {
     try {
@@ -92,7 +89,7 @@ export const getUsers = async () => {
 export const createDocument = async (collectionId, data) => {
     try {
         return await databases.createDocument(
-            '67c8c0c0c0c0c0c0c0c0c0c0',
+            process.env.REACT_APP_APPWRITE_DATABASE_ID || '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
             ID.unique(),
             data
@@ -106,7 +103,7 @@ export const createDocument = async (collectionId, data) => {
 export const getDocuments = async (collectionId) => {
     try {
         return await databases.listDocuments(
-            '67c8c0c0c0c0c0c0c0c0c0c0',
+            process.env.REACT_APP_APPWRITE_DATABASE_ID || '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId
         );
     } catch (error) {
@@ -118,7 +115,7 @@ export const getDocuments = async (collectionId) => {
 export const updateDocument = async (collectionId, documentId, data) => {
     try {
         return await databases.updateDocument(
-            '67c8c0c0c0c0c0c0c0c0c0c0',
+            process.env.REACT_APP_APPWRITE_DATABASE_ID || '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
             documentId,
             data
@@ -132,7 +129,7 @@ export const updateDocument = async (collectionId, documentId, data) => {
 export const deleteDocument = async (collectionId, documentId) => {
     try {
         return await databases.deleteDocument(
-            '67c8c0c0c0c0c0c0c0c0c0c0',
+            process.env.REACT_APP_APPWRITE_DATABASE_ID || '67c8c0c0c0c0c0c0c0c0c0c0',
             collectionId,
             documentId
         );
