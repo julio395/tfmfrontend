@@ -18,6 +18,21 @@ export const MONGODB_API_URL = isDevelopment
     ? 'http://localhost:3001/api/tfm'
     : 'https://projectfm.julio.coolify.hgccarlos.es/api/tfm';
 
+export const checkSession = async () => {
+    try {
+        const session = await account.getSession('current');
+        console.log('Sesión actual:', session);
+        return session;
+    } catch (error) {
+        console.error('Error al verificar sesión:', error);
+        if (error.code === 401) {
+            // Sesión no válida o expirada
+            return null;
+        }
+        throw error;
+    }
+};
+
 export const createUser = async (email, password, name) => {
     try {
         const user = await account.create(
@@ -79,9 +94,10 @@ export const getCurrentUser = async () => {
 export const logoutUser = async () => {
     try {
         await account.deleteSession('current');
+        console.log('Sesión cerrada exitosamente');
     } catch (error) {
-        console.error('Error logging out:', error);
-        throw error;
+        console.error('Error al cerrar sesión:', error);
+        throw new Error('Error al cerrar sesión. Por favor, intenta nuevamente.');
     }
 };
 
