@@ -4,7 +4,7 @@
   "framework": "react",
   "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
   "outputDirectory": "build",
-  "installCommand": "npm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "environment": {
     "REACT_APP_APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
     "REACT_APP_APPWRITE_PROJECT_ID": "664a1c2c0030c2a0c4c9",
@@ -14,12 +14,16 @@
     "REACT_APP_API_URL": "https://projectfm.julio.coolify.hgccarlos.es",
     "REACT_APP_APPWRITE_API_URL": "https://cloud.appwrite.io/v1",
     "GENERATE_SOURCEMAP": "false",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
   },
   "nixpacks": {
     "start": "serve -s build",
     "build": {
       "command": "CI=false GENERATE_SOURCEMAP=false npm run build"
+    },
+    "install": {
+      "command": "npm install --legacy-peer-deps"
     }
   }
 } 
