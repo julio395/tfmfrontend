@@ -3,7 +3,12 @@ import { Box, Typography, TextField, Button, Slider, Select, MenuItem, FormContr
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.coolify.hgccarlos.es';
+
+// Configuración de Axios
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const [activos, setActivos] = useState([]);
@@ -94,9 +99,11 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     useEffect(() => {
         const fetchActivos = async () => {
             try {
+                console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
                 const response = await axios.get(`${API_URL}/api/tfm/Activos/all`);
                 
                 if (!response.data || !Array.isArray(response.data)) {
+                    console.error('Formato de respuesta inválido:', response.data);
                     setError('Formato de datos inválido recibido del servidor');
                     setLoading(false);
                     return;
@@ -106,15 +113,18 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 const activosFiltrados = response.data.filter(activo => activo && activo.Categoría);
                 
                 if (activosFiltrados.length === 0) {
+                    console.error('No se encontraron activos con categoría');
                     setError('No se encontraron activos con categoría en la base de datos');
                     setLoading(false);
                     return;
                 }
 
+                console.log('Activos obtenidos:', activosFiltrados.length);
                 setActivos(activosFiltrados);
                 
                 // Extraer categorías únicas
                 const categoriasUnicas = [...new Set(activosFiltrados.map(activo => activo.Categoría))];
+                console.log('Categorías encontradas:', categoriasUnicas);
                 
                 if (categoriasUnicas.length === 0) {
                     setError('No se encontraron categorías en los activos');
@@ -172,13 +182,19 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 setLoading(false);
             } catch (error) {
                 console.error('Error al cargar activos:', error);
+                if (error.response) {
+                    console.error('Respuesta del servidor:', error.response.data);
+                    console.error('Estado:', error.response.status);
+                } else if (error.request) {
+                    console.error('No se recibió respuesta del servidor');
+                }
                 setError('Error al cargar los activos. Por favor, intente nuevamente.');
                 setLoading(false);
             }
         };
 
         fetchActivos();
-    }, [borradoresCargados]);
+    }, []);
 
     const handleCantidadChange = (categoria, cantidad) => {
         const nuevaCantidad = parseInt(cantidad) || 0;
