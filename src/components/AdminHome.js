@@ -27,7 +27,7 @@ const AdminHome = ({ userData, onLogout }) => {
   const checkBackendConnection = async () => {
     try {
       const baseUrl = MONGODB_API_URL.replace('/api/tfm', '');
-      const response = await fetch(`${baseUrl}/api/test`, {
+      const response = await fetch(`${baseUrl}/api/mongodb-status`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
@@ -36,6 +36,11 @@ const AdminHome = ({ userData, onLogout }) => {
 
       if (!response.ok) {
         throw new Error(`Error en la respuesta: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (data.status !== 'connected') {
+        throw new Error('MongoDB no está conectado');
       }
 
       return true;
