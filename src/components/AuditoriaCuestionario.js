@@ -9,11 +9,24 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
+    timeout: 10000, // 10 segundos de timeout
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     }
 });
+
+// Interceptor para manejar errores de red
+axiosInstance.interceptors.response.use(
+    response => response,
+    error => {
+        if (error.code === 'ECONNABORTED') {
+            console.error('La petición ha excedido el tiempo de espera');
+            return Promise.reject(new Error('La petición ha excedido el tiempo de espera. Por favor, intente nuevamente.'));
+        }
+        return Promise.reject(error);
+    }
+);
 
 const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const [activos, setActivos] = useState([]);
@@ -110,9 +123,14 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
                 
                 // Verificar la conexión con MongoDB primero
-                const mongoStatus = await axiosInstance.get('/api/mongodb-status');
-                if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
-                    throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
+                try {
+                    const mongoStatus = await axiosInstance.get('/api/mongodb-status');
+                    if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
+                        throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
+                    }
+                } catch (mongoError) {
+                    console.error('Error al verificar estado de MongoDB:', mongoError);
+                    throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
                 }
 
                 // Obtener los activos
@@ -232,18 +250,17 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     ...Array(nuevaCantidad - detallesPrevios.length).fill({
                         nombre: '',
                         proveedor: '',
-                        criticidad: 3,
-                        securizacion: ''
+                        version: '',
+                        ubicacion: ''
                     })
                 ];
             } else {
-                // Recortar si se reduce la cantidad
+                // Reducir la lista manteniendo los primeros elementos
                 nuevosDetalles = detallesPrevios.slice(0, nuevaCantidad);
             }
             return {
                 ...prev,
                 [categoria]: {
-                    ...prev[categoria],
                     cantidad: nuevaCantidad,
                     detalles: nuevosDetalles
                 }
@@ -252,50 +269,39 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     };
 
     const handleDetalleChange = (categoria, index, field, value) => {
-        setRespuestas(prev => ({
-            ...prev,
-            [categoria]: {
-                ...prev[categoria],
-                detalles: prev[categoria].detalles.map((detalle, i) => 
-                    i === index ? { ...detalle, [field]: value } : detalle
-                )
-            }
-        }));
+        setRespuestas(prev => {
+            const detalles = [...prev[categoria].detalles];
+            detalles[index] = {
+                ...detalles[index],
+                [field]: value
+            };
+            return {
+                ...prev,
+                [categoria]: {
+                    ...prev[categoria],
+                    detalles
+                }
+            };
+        });
     };
 
     const handleGuardarCategoria = async (categoria) => {
         try {
-            if (!userData || !userData.$id) {
-                setError('No se encontraron los datos del usuario. Por favor, inicie sesión nuevamente.');
-                return;
-            }
-
-            const dataToSend = {
-                respuestas: {
-                    [categoria]: respuestas[categoria]
-                },
-                cliente: {
-                    id: userData.$id,
-                    nombre: userData.name,
-                    email: userData.email,
-                    empresa: userData.empresa || 'No especificada'
-                },
-                ultimaModificacion: new Date().toISOString()
+            const datosCategoria = {
+                categoria,
+                respuestas: respuestas[categoria],
+                userId: userData.$id
             };
 
-            let response;
-            // Si ya existe una auditoría en progreso, actualizamos
             if (auditoriaId) {
-                response = await axios.put(`${API_URL}/api/auditoria/${auditoriaId}`, dataToSend);
+                // Actualizar auditoría existente
+                await axios.put(`${API_URL}/api/auditoria/${auditoriaId}/categoria`, datosCategoria);
             } else {
-                // Si no existe, creamos una nueva
-                response = await axios.post(`${API_URL}/api/auditoria/en-progreso`, dataToSend);
-                if (response.data && response.data._id) {
-                    setAuditoriaId(response.data._id);
-                }
+                // Crear nueva auditoría
+                const response = await axios.post(`${API_URL}/api/auditoria`, datosCategoria);
+                setAuditoriaId(response.data._id);
             }
 
-            // Actualizar SOLO el estado de guardado de la categoría actual
             setGuardadoCategoria(prev => ({
                 ...prev,
                 [categoria]: {
@@ -303,60 +309,46 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     timestamp: new Date().toISOString()
                 }
             }));
-
-            // Si la respuesta incluye las respuestas actualizadas, actualizamos el estado
-            if (response.data && response.data.respuestas) {
-                setRespuestas(prev => ({
-                    ...prev,
-                    ...response.data.respuestas
-                }));
-            }
-
-            alert(`Respuestas de ${categoria} guardadas correctamente`);
         } catch (error) {
             console.error('Error al guardar categoría:', error);
-            setError(`Error al guardar las respuestas de ${categoria}`);
-            alert(`Error al guardar las respuestas de ${categoria}. Por favor, intente nuevamente.`);
+            setError('Error al guardar los datos. Por favor, intente nuevamente.');
         }
     };
 
     const handleSubmit = async () => {
         try {
-            if (!userData || !userData.$id) {
-                alert('Error: No se encontraron los datos del usuario. Por favor, inicie sesión nuevamente.');
+            setLoading(true);
+            setError(null);
+
+            // Verificar que todas las categorías tengan datos
+            const categoriasSinDatos = categorias.filter(categoria => {
+                const datosCategoria = respuestas[categoria];
+                return !datosCategoria || datosCategoria.cantidad === 0;
+            });
+
+            if (categoriasSinDatos.length > 0) {
+                setError(`Por favor, complete los datos para las siguientes categorías: ${categoriasSinDatos.join(', ')}`);
+                setLoading(false);
                 return;
             }
 
-            if (!auditoriaId) {
-                alert('Error: No se encontró la auditoría en progreso.');
-                return;
-            }
+            // Enviar datos al backend
+            const response = await axios.post(`${API_URL}/api/auditoria/procesar`, {
+                userId: userData.$id,
+                respuestas
+            });
 
-            const dataToSend = {
-                estado: 'completada',
-                finalizado: true,
-                procesadoIA: false,
-                ultimaModificacion: new Date().toISOString()
-            };
-
-            const response = await axios.put(`${API_URL}/api/auditoria/${auditoriaId}/finalizar`, dataToSend);
-            
-            if (response.data) {
-                alert('Auditoría finalizada correctamente');
-                onCancel();
+            if (response.data.success) {
+                setProcesadoIA(true);
+                setMostrarConfirmacion(true);
             } else {
-                alert('La auditoría se guardó pero no se recibió confirmación del servidor');
-                onCancel();
+                setError('Error al procesar la auditoría. Por favor, intente nuevamente.');
             }
         } catch (error) {
-            if (error.response) {
-                const errorMessage = error.response.data?.error || error.response.data?.message || 'Error al finalizar la auditoría';
-                alert(`Error del servidor: ${errorMessage}`);
-            } else if (error.request) {
-                alert('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
-            } else {
-                alert('Error al finalizar la auditoría. Por favor, intente nuevamente.');
-            }
+            console.error('Error al enviar auditoría:', error);
+            setError('Error al procesar la auditoría. Por favor, intente nuevamente.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -365,29 +357,28 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     };
 
     const handleConfirmarFinalizacion = (confirmado) => {
-        setMostrarConfirmacion(false);
         if (confirmado) {
-            handleSubmit();
+            onCancel();
         }
+        setMostrarConfirmacion(false);
     };
 
-    // Resetear el estado de borradores cargados cuando se cancela
     const handleCancel = () => {
-        setBorradoresCargados(false);
-        onCancel();
+        setMostrarConfirmacion(true);
     };
 
     const handleEliminarActivo = (categoria, index) => {
         setRespuestas(prev => {
-            const nuevasRespuestas = { ...prev };
-            const detalles = [...nuevasRespuestas[categoria].detalles];
+            const detalles = [...prev[categoria].detalles];
             detalles.splice(index, 1);
-            nuevasRespuestas[categoria] = {
-                ...nuevasRespuestas[categoria],
-                cantidad: nuevasRespuestas[categoria].cantidad - 1,
-                detalles: detalles
+            return {
+                ...prev,
+                [categoria]: {
+                    ...prev[categoria],
+                    cantidad: detalles.length,
+                    detalles
+                }
             };
-            return nuevasRespuestas;
         });
     };
 
@@ -403,468 +394,131 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
                 <Typography color="error">{error}</Typography>
-                <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={() => window.location.reload()}
-                    sx={{ mt: 2 }}
-                >
+                <Button onClick={() => window.location.reload()} sx={{ mt: 2 }}>
                     Reintentar
                 </Button>
             </Box>
         );
     }
 
-    if (categorias.length === 0) {
-        return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="error">
-                    No se encontraron categorías de activos. Por favor, contacte al administrador.
-                </Typography>
-            </Box>
-        );
-    }
-
     return (
-        <Box sx={{ 
-            p: 3,
-            width: '100%',
-            margin: '0 auto'
-        }}>
-            <Typography 
-                variant="h4" 
-                sx={{ 
-                    mb: 3,
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    color: 'primary.main'
-                }}
-            >
-                Auditoría de seguridad
+        <Box sx={{ p: 3 }}>
+            <Typography variant="h5" gutterBottom>
+                Auditoría de Activos
             </Typography>
-            
-            {categorias.map((categoria, categoriaIndex) => {
-                // Asegurarnos de que la categoría tiene una estructura válida
-                const categoriaRespuestas = respuestas[categoria] || { cantidad: 0, detalles: [] };
-                
-                return (
-                    <Paper key={`categoria-${categoriaIndex}`} sx={{ p: 3, mb: 3, width: '100%', position: 'relative' }}>
-                        <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center',
-                            mb: 3,
-                            position: 'relative'
-                        }}>
-                            <Typography 
-                                variant="h6" 
-                                sx={{ 
-                                    color: 'primary.main',
-                                    fontWeight: 'bold',
-                                    fontSize: '1.5rem'
-                                }}
-                            >
-                                {categoria}
-                            </Typography>
+            {categorias.map(categoria => (
+                <Paper key={categoria} sx={{ p: 2, mb: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                        {categoria}
+                    </Typography>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                            <FormControl fullWidth>
+                                <InputLabel>Cantidad de Activos</InputLabel>
+                                <Select
+                                    value={respuestas[categoria]?.cantidad || 0}
+                                    onChange={(e) => handleCantidadChange(categoria, e.target.value)}
+                                >
+                                    {[...Array(11)].map((_, i) => (
+                                        <MenuItem key={i} value={i}>{i}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        {respuestas[categoria]?.detalles.map((detalle, index) => (
+                            <Grid item xs={12} key={index}>
+                                <Paper sx={{ p: 2 }}>
+                                    <Grid container spacing={2}>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Nombre del Activo</InputLabel>
+                                                <Select
+                                                    value={detalle.nombre}
+                                                    onChange={(e) => handleDetalleChange(categoria, index, 'nombre', e.target.value)}
+                                                >
+                                                    {modelos[categoria]?.nombres.map((modelo, i) => (
+                                                        <MenuItem key={i} value={modelo.nombre}>
+                                                            {modelo.nombre}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControl fullWidth>
+                                                <InputLabel>Proveedor</InputLabel>
+                                                <Select
+                                                    value={detalle.proveedor}
+                                                    onChange={(e) => handleDetalleChange(categoria, index, 'proveedor', e.target.value)}
+                                                >
+                                                    {modelos[categoria]?.proveedores.map((proveedor, i) => (
+                                                        <MenuItem key={i} value={proveedor}>
+                                                            {proveedor}
+                                                        </MenuItem>
+                                                    ))}
+                                                </Select>
+                                            </FormControl>
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                fullWidth
+                                                label="Versión"
+                                                value={detalle.version}
+                                                onChange={(e) => handleDetalleChange(categoria, index, 'version', e.target.value)}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                fullWidth
+                                                label="Ubicación"
+                                                value={detalle.ubicacion}
+                                                onChange={(e) => handleDetalleChange(categoria, index, 'ubicacion', e.target.value)}
+                                            />
+                                        </Grid>
+                                        <Grid item xs={12}>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                startIcon={<DeleteIcon />}
+                                                onClick={() => handleEliminarActivo(categoria, index)}
+                                            >
+                                                Eliminar Activo
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </Paper>
+                            </Grid>
+                        ))}
+                        <Grid item xs={12}>
                             <Button
                                 variant="contained"
+                                color="primary"
                                 onClick={() => handleGuardarCategoria(categoria)}
-                                sx={{ 
-                                    backgroundColor: guardadoCategoria[categoria]?.guardado ? '#81c784' : '#ffcc80',
-                                    color: guardadoCategoria[categoria]?.guardado ? '#fff' : '#5d4037',
-                                    '&:hover': {
-                                        backgroundColor: guardadoCategoria[categoria]?.guardado ? '#66bb6a' : '#ffb74d',
-                                        color: '#fff'
-                                    },
-                                    padding: '6px 12px',
-                                    width: 'fit-content',
-                                    whiteSpace: 'nowrap',
-                                    fontSize: '0.875rem',
-                                    textTransform: 'none',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                    borderRadius: '4px',
-                                    position: 'absolute',
-                                    right: '24px',
-                                    top: '50%',
-                                    transform: 'translateY(-50%)'
-                                }}
+                                disabled={guardadoCategoria[categoria]?.guardado}
                             >
                                 {guardadoCategoria[categoria]?.guardado ? 'Guardado' : 'Guardar Categoría'}
                             </Button>
-                        </Box>
-                        
-                        <Box sx={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: 3,
-                            width: '100%',
-                            minWidth: '600px'
-                        }}>
-                            <Grid container spacing={3}>
-                                <Grid sx={{ width: { xs: '100%', md: '100px' } }}>
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        gap: 2
-                                    }}>
-                                        <Typography 
-                                            variant="subtitle1" 
-                                            sx={{ 
-                                                whiteSpace: 'nowrap',
-                                                fontSize: '0.9rem'
-                                            }}
-                                        >
-                                            ¿Cuántos activos de {categoria.toLowerCase()} tiene?
-                                        </Typography>
-                                        <input
-                                            type="number"
-                                            value={categoriaRespuestas.cantidad}
-                                            onChange={(e) => handleCantidadChange(categoria, e.target.value)}
-                                            min="0"
-                                            style={{
-                                                width: '80px',
-                                                height: '45px',
-                                                marginLeft: '20px',
-                                                padding: '0 14px',
-                                                fontSize: '1.2rem',
-                                                fontWeight: '500',
-                                                textAlign: 'center',
-                                                border: '2px solid #1976d2',
-                                                borderRadius: '4px',
-                                                color: 'black',
-                                                backgroundColor: 'white'
-                                            }}
-                                        />
-                                    </Box>
-                                </Grid>
-
-                                <Grid sx={{ width: { xs: '100%', md: 'calc(100% - 100px)' } }}>
-                                    {categoriaRespuestas.cantidad > 0 && (
-                                        <Typography variant="subtitle1" gutterBottom sx={{ mb: 2 }}>
-                                            {categoriaRespuestas.cantidad === 1 
-                                                ? `Detalles del activo de ${categoria.toLowerCase()}`
-                                                : `Detalles de los activos de ${categoria.toLowerCase()}`
-                                            }
-                                        </Typography>
-                                    )}
-                                    
-                                    {[...Array(categoriaRespuestas.cantidad)].map((_, index) => (
-                                        <Paper 
-                                            key={`detalle-${categoria}-${index}`} 
-                                            sx={{ 
-                                                p: 4, 
-                                                mb: 3,
-                                                width: '100%',
-                                                minWidth: '600px',
-                                                backgroundColor: 'background.default',
-                                                borderRadius: 2,
-                                                mx: 'auto',
-                                                position: 'relative'
-                                            }}
-                                        >
-                                            <Box sx={{ 
-                                                display: 'flex', 
-                                                justifyContent: 'space-between', 
-                                                alignItems: 'center',
-                                                mb: 4
-                                            }}>
-                                                <Typography 
-                                                    variant="h6" 
-                                                    sx={{ 
-                                                        color: 'primary.main',
-                                                        fontWeight: 'medium'
-                                                    }}
-                                                >
-                                                    Activo {categoria} {index + 1}
-                                                </Typography>
-                                                <IconButton
-                                                    color="error"
-                                                    onClick={() => handleEliminarActivo(categoria, index)}
-                                                    sx={{
-                                                        backgroundColor: 'rgba(211, 47, 47, 0.1)',
-                                                        '&:hover': {
-                                                            backgroundColor: 'rgba(211, 47, 47, 0.2)'
-                                                        },
-                                                        width: '40px',
-                                                        height: '40px',
-                                                        borderRadius: '4px',
-                                                        border: '1px solid rgba(211, 47, 47, 0.3)',
-                                                        '& .MuiSvgIcon-root': {
-                                                            fontSize: '20px'
-                                                        }
-                                                    }}
-                                                >
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </Box>
-
-                                            <Box sx={{ 
-                                                display: 'flex', 
-                                                flexDirection: 'column', 
-                                                gap: 4,
-                                                width: '100%',
-                                                minWidth: '600px'
-                                            }}>
-                                                {/* Sección de Información del Activo */}
-                                                <Box sx={{ width: '100%' }}>
-                                                    <Typography 
-                                                        variant="subtitle1" 
-                                                        gutterBottom 
-                                                        sx={{ 
-                                                            mb: 3,
-                                                            fontWeight: 'medium',
-                                                            borderBottom: '1px solid',
-                                                            borderColor: 'black',
-                                                            pb: 0.5,
-                                                            width: 'fit-content'
-                                                        }}
-                                                    >
-                                                        Información del Activo
-                                                    </Typography>
-                                                    
-                                                    <Box sx={{ 
-                                                        display: 'flex', 
-                                                        flexDirection: 'column', 
-                                                        gap: 2,
-                                                        width: '100%'
-                                                    }}>
-                                                        <Box sx={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            gap: 2,
-                                                            width: '100%'
-                                                        }}>
-                                                            <Typography sx={{ 
-                                                                flex: '0 0 150px',
-                                                                fontSize: '0.9rem'
-                                                            }}>
-                                                                Nombre
-                                                            </Typography>
-                                                            <FormControl sx={{ flex: 1 }}>
-                                                                <Select
-                                                                    value={categoriaRespuestas.detalles[index]?.nombre || ''}
-                                                                    onChange={(e) => {
-                                                                        const nombreSeleccionado = e.target.value;
-                                                                        const activoSeleccionado = modelos[categoria]?.nombres.find(
-                                                                            activo => activo.nombre === nombreSeleccionado
-                                                                        );
-                                                                        handleDetalleChange(categoria, index, 'nombre', nombreSeleccionado);
-                                                                        if (nombreSeleccionado) {
-                                                                            handleDetalleChange(categoria, index, 'proveedor', '');
-                                                                        }
-                                                                    }}
-                                                                    size="small"
-                                                                >
-                                                                    <MenuItem value="">
-                                                                        <em>Seleccionar</em>
-                                                                    </MenuItem>
-                                                                    {modelos[categoria]?.nombres.map((activo, i) => (
-                                                                        <MenuItem key={i} value={activo.nombre}>
-                                                                            {activo.nombre}
-                                                                        </MenuItem>
-                                                                    ))}
-                                                                </Select>
-                                                            </FormControl>
-                                                        </Box>
-
-                                                        <Box sx={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            gap: 2,
-                                                            width: '100%'
-                                                        }}>
-                                                            <Typography sx={{ 
-                                                                flex: '0 0 150px',
-                                                                fontSize: '0.9rem'
-                                                            }}>
-                                                                Proveedor
-                                                            </Typography>
-                                                            <FormControl sx={{ flex: 1 }}>
-                                                                <Select
-                                                                    value={categoriaRespuestas.detalles[index]?.proveedor || ''}
-                                                                    onChange={(e) => handleDetalleChange(categoria, index, 'proveedor', e.target.value)}
-                                                                    size="small"
-                                                                >
-                                                                    <MenuItem value="">
-                                                                        <em>Seleccionar</em>
-                                                                    </MenuItem>
-                                                                    {modelos[categoria]?.proveedores.map((proveedor, i) => (
-                                                                        <MenuItem key={i} value={proveedor}>
-                                                                            {proveedor}
-                                                                        </MenuItem>
-                                                                    ))}
-                                                                </Select>
-                                                            </FormControl>
-                                                        </Box>
-                                                    </Box>
-                                                </Box>
-
-                                                {/* Sección de Nivel de Criticidad */}
-                                                <Box sx={{ width: '100%', minWidth: '600px' }}>
-                                                    <Typography 
-                                                        variant="subtitle1" 
-                                                        gutterBottom 
-                                                        sx={{ 
-                                                            mb: 3,
-                                                            fontWeight: 'medium',
-                                                            borderBottom: '1px solid',
-                                                            borderColor: 'black',
-                                                            pb: 0.5,
-                                                            width: 'fit-content'
-                                                        }}
-                                                    >
-                                                        Nivel de Criticidad
-                                                    </Typography>
-                                                    <Box sx={{ 
-                                                        px: 2, 
-                                                        width: '80%', 
-                                                        minWidth: '400px',
-                                                        mx: 'auto'
-                                                    }}>
-                                                        <Slider
-                                                            value={categoriaRespuestas.detalles[index]?.criticidad || 3}
-                                                            onChange={(_, value) => handleDetalleChange(categoria, index, 'criticidad', value)}
-                                                            min={1}
-                                                            max={5}
-                                                            marks={[
-                                                                { value: 1, label: '1' },
-                                                                { value: 2, label: '2' },
-                                                                { value: 3, label: '3' },
-                                                                { value: 4, label: '4' },
-                                                                { value: 5, label: '5' }
-                                                            ]}
-                                                            valueLabelDisplay="auto"
-                                                        />
-                                                    </Box>
-                                                </Box>
-
-                                                {/* Sección de Descripción de Securización */}
-                                                <Box sx={{ width: '100%', minWidth: '600px' }}>
-                                                    <Typography 
-                                                        variant="subtitle1" 
-                                                        gutterBottom 
-                                                        sx={{ 
-                                                            mb: 3,
-                                                            fontWeight: 'medium',
-                                                            borderBottom: '1px solid',
-                                                            borderColor: 'black',
-                                                            pb: 0.5,
-                                                            width: 'fit-content'
-                                                        }}
-                                                    >
-                                                        Descripción de la Securización
-                                                    </Typography>
-                                                    <TextField
-                                                        fullWidth
-                                                        multiline
-                                                        rows={4}
-                                                        value={categoriaRespuestas.detalles[index]?.securizacion || ''}
-                                                        onChange={(e) => handleDetalleChange(categoria, index, 'securizacion', e.target.value)}
-                                                        sx={{ minWidth: '600px' }}
-                                                    />
-                                                </Box>
-                                            </Box>
-                                        </Paper>
-                                    ))}
-                                </Grid>
-                            </Grid>
-                        </Box>
-                    </Paper>
-                );
-            })}
-
-            <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: 3,
-                mt: 4,
-                flexWrap: 'wrap'
-            }}>
+                        </Grid>
+                    </Grid>
+                </Paper>
+            ))}
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
                 <Button
-                    variant="contained"
+                    variant="outlined"
+                    color="secondary"
                     onClick={handleCancel}
-                    sx={{ 
-                        px: 4,
-                        py: 1.5,
-                        fontSize: '1.1rem',
-                        backgroundColor: '#ef5350',
-                        '&:hover': {
-                            backgroundColor: '#e53935'
-                        },
-                        minWidth: { xs: '100%', sm: '200px' },
-                        maxWidth: '300px'
-                    }}
                 >
                     Cancelar
                 </Button>
                 <Button
                     variant="contained"
-                    onClick={handleTerminar}
-                    sx={{ 
-                        px: 4,
-                        py: 1.5,
-                        fontSize: '1.1rem',
-                        backgroundColor: '#66bb6a',
-                        '&:hover': {
-                            backgroundColor: '#43a047'
-                        },
-                        minWidth: { xs: '100%', sm: '200px' },
-                        maxWidth: '300px'
-                    }}
+                    color="primary"
+                    onClick={handleSubmit}
+                    disabled={loading}
                 >
-                    Terminar
+                    Finalizar Auditoría
                 </Button>
             </Box>
-
-            {/* Diálogo de confirmación */}
-            {mostrarConfirmacion && (
-                <Box
-                    sx={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 1000
-                    }}
-                >
-                    <Paper
-                        sx={{
-                            p: 4,
-                            maxWidth: 400,
-                            width: '100%',
-                            textAlign: 'center'
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom>
-                            ¿Está seguro de que desea finalizar el cuestionario?
-                        </Typography>
-                        <Typography variant="body1" sx={{ mb: 3 }}>
-                            Una vez finalizado, no podrá realizar más cambios.
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => handleConfirmarFinalizacion(true)}
-                            >
-                                Sí, finalizar
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                onClick={() => handleConfirmarFinalizacion(false)}
-                            >
-                                No, continuar
-                            </Button>
-                        </Box>
-                    </Paper>
-                </Box>
-            )}
         </Box>
     );
 };
