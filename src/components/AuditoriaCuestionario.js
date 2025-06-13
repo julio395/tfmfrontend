@@ -6,9 +6,14 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.coolify.hgccarlos.es';
 
 // Configuración de Axios
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common['Accept'] = 'application/json';
-axios.defaults.headers.common['Content-Type'] = 'application/json';
+const axiosInstance = axios.create({
+    baseURL: API_URL,
+    withCredentials: true,
+    headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+});
 
 const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const [activos, setActivos] = useState([]);
@@ -100,7 +105,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
         const fetchActivos = async () => {
             try {
                 console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
-                const response = await axios.get(`${API_URL}/api/tfm/Activos/all`);
+                const response = await axiosInstance.get('/api/tfm/Activos/all');
                 
                 if (!response.data || !Array.isArray(response.data)) {
                     console.error('Formato de respuesta inválido:', response.data);
