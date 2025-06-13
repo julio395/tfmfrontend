@@ -164,18 +164,31 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Crear una instancia del servicio Users
-        const users = new Users(client);
+        // Obtener el token de la sesión
+        const token = session.providerAccessToken;
 
-        // Usar el servicio Users para obtener la lista de usuarios
-        const response = await users.list();
-        console.log('Respuesta de getUsers:', response);
+        // Hacer la petición a la API REST de Appwrite
+        const response = await fetch(`${client.config.endpoint}/users`, {
+            method: 'GET',
+            headers: {
+                'X-Appwrite-Project': client.config.project,
+                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
 
-        if (!response || !response.users) {
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Respuesta de getUsers:', data);
+
+        if (!data || !data.users) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        return response.users.map(user => ({
+        return data.users.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
