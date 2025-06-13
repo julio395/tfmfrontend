@@ -134,6 +134,8 @@ const AdminHome = ({ userData, onLogout }) => {
       }
 
       const currentUser = await account.get();
+      console.log('Usuario actual en checkAuth:', currentUser);
+
       if (!currentUser.labels?.includes('admin')) {
         throw new Error('No tienes permisos de administrador');
       }
@@ -153,6 +155,11 @@ const AdminHome = ({ userData, onLogout }) => {
       setIsLoading(true);
       setErrorMessage(null);
       
+      const session = await account.getSession('current');
+      if (!session) {
+        throw new Error('No hay sesión activa');
+      }
+
       const users = await getUsers();
       console.log('Usuarios obtenidos:', users);
       
