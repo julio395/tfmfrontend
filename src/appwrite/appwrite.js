@@ -1,4 +1,4 @@
-import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
+import { Client, Account, Teams, Databases, Storage, ID, Users } from 'appwrite';
 
 // Configuración del cliente de Appwrite
 const client = new Client()
@@ -11,6 +11,7 @@ const account = new Account(client);
 const teams = new Teams(client);
 const databases = new Databases(client);
 const storage = new Storage(client);
+const users = new Users(client);
 
 // Configuración de la API de MongoDB
 const isDevelopment = window.location.hostname === 'localhost';
@@ -158,7 +159,7 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        const response = await account.list();
+        const response = await users.list();
         console.log('Respuesta de getUsers:', response);
         return response.users.map(user => ({
             $id: user.$id,
@@ -353,4 +354,4 @@ export const deleteMongoDBItem = async (collection, id) => {
 };
 
 // Exportar las instancias de Appwrite
-export { client, account, teams, databases, storage, ID }; 
+export { client, account, teams, databases, storage, users, ID }; 
