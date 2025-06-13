@@ -131,18 +131,47 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 // Primero verificamos que el backend esté respondiendo
                 try {
                     console.log('Verificando disponibilidad del backend...');
-                    const healthCheck = await axios.get(`${API_URL}/api/health`, { timeout: 5000 });
+                    const healthCheck = await axios.get(`${API_URL}/api/health`, { 
+                        timeout: 5000,
+                        validateStatus: function (status) {
+                            return status < 500; // Aceptamos cualquier status que no sea 500
+                        }
+                    });
                     console.log('Estado del backend:', healthCheck.data);
+                    
+                    if (healthCheck.status === 500) {
+                        throw new Error('Error interno del servidor. Por favor, contacte al administrador.');
+                    }
                 } catch (healthError) {
-                    console.error('Error al verificar el backend:', healthError);
-                    throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
+                    console.error('Error detallado al verificar el backend:', {
+                        message: healthError.message,
+                        response: healthError.response?.data,
+                        status: healthError.response?.status,
+                        code: healthError.code,
+                        stack: healthError.stack
+                    });
+                    
+                    if (healthError.response?.status === 500) {
+                        throw new Error('Error interno del servidor. Por favor, contacte al administrador.');
+                    } else {
+                        throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
+                    }
                 }
 
                 // Verificar la conexión con MongoDB
                 try {
                     console.log('Verificando conexión con MongoDB...');
-                    const mongoStatus = await axiosInstance.get('/api/mongodb-status', { timeout: 5000 });
+                    const mongoStatus = await axiosInstance.get('/api/mongodb-status', { 
+                        timeout: 5000,
+                        validateStatus: function (status) {
+                            return status < 500;
+                        }
+                    });
                     console.log('Estado de MongoDB:', mongoStatus.data);
+                    
+                    if (mongoStatus.status === 500) {
+                        throw new Error('Error interno del servidor al conectar con MongoDB.');
+                    }
                     
                     if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
                         throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
@@ -152,15 +181,30 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                         message: mongoError.message,
                         response: mongoError.response?.data,
                         status: mongoError.response?.status,
-                        code: mongoError.code
+                        code: mongoError.code,
+                        stack: mongoError.stack
                     });
-                    throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
+                    
+                    if (mongoError.response?.status === 500) {
+                        throw new Error('Error interno del servidor al conectar con MongoDB.');
+                    } else {
+                        throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
+                    }
                 }
 
                 // Obtener los activos
                 console.log('Intentando obtener activos...');
-                const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { timeout: 10000 });
+                const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
+                    timeout: 10000,
+                    validateStatus: function (status) {
+                        return status < 500;
+                    }
+                });
                 console.log('Respuesta de activos recibida:', activosResponse.data);
+                
+                if (activosResponse.status === 500) {
+                    throw new Error('Error interno del servidor al obtener los activos.');
+                }
                 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
                     console.error('Formato de respuesta inválido:', activosResponse.data);
@@ -249,7 +293,9 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     stack: error.stack
                 });
                 
-                if (error.message.includes('Timeout')) {
+                if (error.message.includes('Error interno del servidor')) {
+                    setError(error.message);
+                } else if (error.message.includes('Timeout')) {
                     setError('El servidor está tardando demasiado en responder. Por favor, intente nuevamente más tarde.');
                 } else if (error.message.includes('no está respondiendo')) {
                     setError('El servidor no está respondiendo. Por favor, contacte al administrador.');
