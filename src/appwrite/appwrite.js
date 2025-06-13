@@ -158,31 +158,19 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        // Hacer la petición a la API REST de Appwrite usando solo la API key
-        const response = await fetch(`${client.config.endpoint}/users`, {
-            method: 'GET',
-            headers: {
-                'X-Appwrite-Project': client.config.project,
-                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Crear una instancia del servicio Users
+        const users = new Users(client);
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Error detallado:', errorData);
-            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
-        }
+        // Obtener la lista de usuarios usando el servicio Users
+        const response = await users.list();
+        console.log('Respuesta de getUsers:', response);
 
-        const data = await response.json();
-        console.log('Respuesta de getUsers:', data);
-
-        if (!data || !data.users) {
+        if (!response || !response.users) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
         // Mapear todos los usuarios sin el campo role
-        return data.users.map(user => ({
+        return response.users.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
