@@ -164,31 +164,32 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Hacer la petición a la API REST de Appwrite
-        const response = await fetch(`${client.config.endpoint}/users`, {
-            method: 'GET',
-            headers: {
-                'X-Appwrite-Project': client.config.project,
-                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'X-Appwrite-Session': session.$id,
-                'Content-Type': 'application/json'
-            }
-        });
+        // Obtener el equipo del usuario
+        const teams = new Teams(client);
+        const userTeams = await teams.list();
+        
+        // Verificar si el usuario es administrador
+        const isAdmin = userTeams.teams.some(team => 
+            team.$id === process.env.REACT_APP_APPWRITE_TEAM_ID && 
+            team.roles.includes('admin')
+        );
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Error detallado:', errorData);
-            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
+        if (!isAdmin) {
+            throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
-        const data = await response.json();
-        console.log('Respuesta de getUsers:', data);
+        // Obtener usuarios usando el SDK
+        const response = await client.subscribe('users', (response) => {
+            return response.payload;
+        });
 
-        if (!data || !data.users) {
+        console.log('Respuesta de getUsers:', response);
+
+        if (!response || !Array.isArray(response)) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        return data.users.map(user => ({
+        return response.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
