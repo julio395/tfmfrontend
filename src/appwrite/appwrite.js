@@ -158,14 +158,22 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        // Hacer la petición a la API REST de Appwrite usando la API key
+        // Verificar si hay una sesión activa
+        const session = await account.getSession('current');
+        if (!session) {
+            throw new Error('No hay sesión activa');
+        }
+
+        // Hacer la petición a la API REST de Appwrite usando la API key y el token de sesión
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
+                'X-Appwrite-Session': session.$id,
                 'Content-Type': 'application/json'
-            }
+            },
+            credentials: 'include'
         });
 
         if (!response.ok) {
