@@ -197,7 +197,7 @@ export const getUsers = async () => {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        // Mapear todos los usuarios sin el campo role
+        // Mapear todos los usuarios, manteniendo solo la información básica
         return data.users.map(user => ({
             $id: user.$id,
             email: user.email,
