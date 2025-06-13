@@ -174,9 +174,9 @@ export const getUsers = async () => {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
                 'Content-Type': 'application/json',
-                'X-Appwrite-Response-Format': '1.0.0',
-                'X-Appwrite-JWT': 'true'
-            }
+                'X-Appwrite-Response-Format': '1.0.0'
+            },
+            credentials: 'omit'
         });
 
         if (!response.ok) {
