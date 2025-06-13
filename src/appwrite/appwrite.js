@@ -167,39 +167,26 @@ export const getUsers = async () => {
             throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
-        // Hacer la petición a la API REST de Appwrite usando la API key
-        const response = await fetch(`${client.config.endpoint}/users`, {
-            method: 'GET',
-            headers: {
-                'X-Appwrite-Project': client.config.project,
-                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'Content-Type': 'application/json',
-                'X-Appwrite-Response-Format': '1.0.0'
-            }
-        });
+        // Crear una instancia del servicio Teams
+        const teams = new Teams(client);
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Error detallado:', errorData);
-            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
-        }
+        // Obtener la lista de usuarios usando el SDK
+        const response = await teams.listMemberships('admin');
+        console.log('Respuesta de getUsers:', response);
 
-        const data = await response.json();
-        console.log('Respuesta de getUsers:', data);
-
-        if (!data || !data.users) {
+        if (!response || !response.memberships) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
         // Mapear todos los usuarios, manteniendo solo la información básica
-        return data.users.map(user => ({
-            $id: user.$id,
-            email: user.email,
-            name: user.name,
-            labels: user.labels || [],
-            status: user.status,
-            createdAt: user.$createdAt,
-            updatedAt: user.$updatedAt
+        return response.memberships.map(membership => ({
+            $id: membership.userId,
+            email: membership.email,
+            name: membership.name,
+            labels: membership.labels || [],
+            status: membership.status,
+            createdAt: membership.$createdAt,
+            updatedAt: membership.$updatedAt
         }));
     } catch (error) {
         console.error('Error al obtener usuarios:', error);
