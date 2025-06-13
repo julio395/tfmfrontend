@@ -165,16 +165,14 @@ export const getUsers = async () => {
         }
 
         // Usar el SDK de Appwrite para obtener usuarios
-        const response = await client.subscribe('users', (response) => {
-            console.log('Respuesta de getUsers:', response);
-            return response.payload;
-        });
+        const response = await client.users.list();
+        console.log('Respuesta de getUsers:', response);
 
-        if (!response) {
+        if (!response || !response.users) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        return response.map(user => ({
+        return response.users.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
