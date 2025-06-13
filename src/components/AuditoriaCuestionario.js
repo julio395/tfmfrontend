@@ -134,13 +134,13 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     const healthCheck = await axios.get(`${API_URL}/api/health`, { 
                         timeout: 5000,
                         validateStatus: function (status) {
-                            return status < 500; // Aceptamos cualquier status que no sea 500
+                            return true; // Aceptamos cualquier status para ver el mensaje de error
                         }
                     });
                     console.log('Estado del backend:', healthCheck.data);
                     
-                    if (healthCheck.status === 500) {
-                        throw new Error('Error interno del servidor. Por favor, contacte al administrador.');
+                    if (healthCheck.data.mongodb?.status === 'disconnected') {
+                        throw new Error('La base de datos MongoDB está desconectada. Por favor, contacte al administrador para verificar la conexión.');
                     }
                 } catch (healthError) {
                     console.error('Error detallado al verificar el backend:', {
@@ -151,44 +151,12 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                         stack: healthError.stack
                     });
                     
-                    if (healthError.response?.status === 500) {
+                    if (healthError.response?.data?.mongodb?.status === 'disconnected') {
+                        throw new Error('La base de datos MongoDB está desconectada. Por favor, contacte al administrador para verificar la conexión.');
+                    } else if (healthError.response?.status === 500) {
                         throw new Error('Error interno del servidor. Por favor, contacte al administrador.');
                     } else {
                         throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
-                    }
-                }
-
-                // Verificar la conexión con MongoDB
-                try {
-                    console.log('Verificando conexión con MongoDB...');
-                    const mongoStatus = await axiosInstance.get('/api/mongodb-status', { 
-                        timeout: 5000,
-                        validateStatus: function (status) {
-                            return status < 500;
-                        }
-                    });
-                    console.log('Estado de MongoDB:', mongoStatus.data);
-                    
-                    if (mongoStatus.status === 500) {
-                        throw new Error('Error interno del servidor al conectar con MongoDB.');
-                    }
-                    
-                    if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
-                        throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
-                    }
-                } catch (mongoError) {
-                    console.error('Error detallado al verificar MongoDB:', {
-                        message: mongoError.message,
-                        response: mongoError.response?.data,
-                        status: mongoError.response?.status,
-                        code: mongoError.code,
-                        stack: mongoError.stack
-                    });
-                    
-                    if (mongoError.response?.status === 500) {
-                        throw new Error('Error interno del servidor al conectar con MongoDB.');
-                    } else {
-                        throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
                     }
                 }
 
@@ -197,13 +165,17 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
                     timeout: 10000,
                     validateStatus: function (status) {
-                        return status < 500;
+                        return true; // Aceptamos cualquier status para ver el mensaje de error
                     }
                 });
                 console.log('Respuesta de activos recibida:', activosResponse.data);
                 
                 if (activosResponse.status === 500) {
-                    throw new Error('Error interno del servidor al obtener los activos.');
+                    if (activosResponse.data?.error?.includes('listCollections')) {
+                        throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
+                    } else {
+                        throw new Error('Error interno del servidor al obtener los activos.');
+                    }
                 }
                 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
@@ -293,7 +265,9 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     stack: error.stack
                 });
                 
-                if (error.message.includes('Error interno del servidor')) {
+                if (error.message.includes('MongoDB está desconectada')) {
+                    setError(error.message);
+                } else if (error.message.includes('Error interno del servidor')) {
                     setError(error.message);
                 } else if (error.message.includes('Timeout')) {
                     setError('El servidor está tardando demasiado en responder. Por favor, intente nuevamente más tarde.');
@@ -303,7 +277,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     console.error('Respuesta del servidor:', error.response.data);
                     console.error('Estado:', error.response.status);
                     if (error.response.data.error && error.response.data.error.includes('listCollections')) {
-                        setError('Error de conexión con la base de datos. Por favor, contacte al administrador.');
+                        setError('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
                     } else {
                         setError(`Error del servidor: ${error.response.data.message || 'Error al cargar los activos'}`);
                     }
