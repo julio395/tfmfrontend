@@ -164,9 +164,15 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Obtener el usuario actual para verificar si es admin
+        // Obtener el usuario actual
         const currentUser = await account.get();
-        if (!currentUser.labels || !currentUser.labels.includes('admin')) {
+        
+        // Verificar si el usuario está en el equipo de administradores
+        const adminTeam = await teams.list([
+            'admin' // ID del equipo de administradores
+        ]);
+
+        if (!adminTeam || adminTeam.teams.length === 0) {
             throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
