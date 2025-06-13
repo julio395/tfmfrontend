@@ -158,7 +158,7 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        // Hacer la petición a la API REST de Appwrite usando la API key
+        // Hacer la petición a la API REST de Appwrite usando solo la API key
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
@@ -181,13 +181,12 @@ export const getUsers = async () => {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        // Mapear todos los usuarios, indicando si son admin o user
+        // Mapear todos los usuarios sin el campo role
         return data.users.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
             labels: user.labels || [],
-            role: user.labels && user.labels.includes('admin') ? 'admin' : 'user',
             status: user.status,
             createdAt: user.$createdAt,
             updatedAt: user.$updatedAt
