@@ -140,6 +140,10 @@ const AdminHome = ({ userData, onLogout }) => {
         throw new Error('No tienes permisos de administrador');
       }
 
+      if (!session.providerAccessToken) {
+        throw new Error('Token de acceso no disponible');
+      }
+
       await fetchUsers();
     } catch (error) {
       console.error('Error en checkAuth:', error);
@@ -158,6 +162,10 @@ const AdminHome = ({ userData, onLogout }) => {
       const session = await account.getSession('current');
       if (!session) {
         throw new Error('No hay sesión activa');
+      }
+
+      if (!session.providerAccessToken) {
+        throw new Error('Token de acceso no disponible');
       }
 
       const currentUser = await account.get();
