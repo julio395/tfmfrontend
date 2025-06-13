@@ -9,10 +9,12 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 10000, // 10 segundos de timeout
+    timeout: 15000, // Aumentamos el timeout a 15 segundos
     headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
     }
 });
 
@@ -23,6 +25,10 @@ axiosInstance.interceptors.response.use(
         if (error.code === 'ECONNABORTED') {
             console.error('La petición ha excedido el tiempo de espera');
             return Promise.reject(new Error('La petición ha excedido el tiempo de espera. Por favor, intente nuevamente.'));
+        }
+        if (error.code === 'ERR_NETWORK') {
+            console.error('Error de red:', error);
+            return Promise.reject(new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.'));
         }
         return Promise.reject(error);
     }
@@ -120,13 +126,23 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 setLoading(true);
                 setError(null);
                 
-                console.log('Iniciando verificación de MongoDB...');
+                console.log('Iniciando verificación de conexión con el backend...');
                 
-                // Verificar la conexión con MongoDB primero
+                // Primero verificamos que el backend esté respondiendo
                 try {
-                    console.log('Intentando conectar con MongoDB...');
-                    const mongoStatus = await axiosInstance.get('/api/mongodb-status');
-                    console.log('Respuesta de MongoDB:', mongoStatus.data);
+                    console.log('Verificando disponibilidad del backend...');
+                    const healthCheck = await axios.get(`${API_URL}/api/health`, { timeout: 5000 });
+                    console.log('Estado del backend:', healthCheck.data);
+                } catch (healthError) {
+                    console.error('Error al verificar el backend:', healthError);
+                    throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
+                }
+
+                // Verificar la conexión con MongoDB
+                try {
+                    console.log('Verificando conexión con MongoDB...');
+                    const mongoStatus = await axiosInstance.get('/api/mongodb-status', { timeout: 5000 });
+                    console.log('Estado de MongoDB:', mongoStatus.data);
                     
                     if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
                         throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
@@ -135,20 +151,15 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     console.error('Error detallado al verificar MongoDB:', {
                         message: mongoError.message,
                         response: mongoError.response?.data,
-                        status: mongoError.response?.status
+                        status: mongoError.response?.status,
+                        code: mongoError.code
                     });
                     throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
                 }
 
-                // Obtener los activos con timeout más corto
+                // Obtener los activos
                 console.log('Intentando obtener activos...');
-                const activosResponse = await Promise.race([
-                    axiosInstance.get('/api/tfm/Activos/all'),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout: La petición ha excedido el tiempo de espera')), 5000)
-                    )
-                ]);
-                
+                const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { timeout: 10000 });
                 console.log('Respuesta de activos recibida:', activosResponse.data);
                 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
@@ -234,11 +245,14 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     message: error.message,
                     response: error.response?.data,
                     status: error.response?.status,
-                    code: error.code
+                    code: error.code,
+                    stack: error.stack
                 });
                 
                 if (error.message.includes('Timeout')) {
                     setError('El servidor está tardando demasiado en responder. Por favor, intente nuevamente más tarde.');
+                } else if (error.message.includes('no está respondiendo')) {
+                    setError('El servidor no está respondiendo. Por favor, contacte al administrador.');
                 } else if (error.response) {
                     console.error('Respuesta del servidor:', error.response.data);
                     console.error('Estado:', error.response.status);
