@@ -164,21 +164,21 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Obtener el token de la sesión
-        const token = session.providerAccessToken;
-
         // Hacer la petición a la API REST de Appwrite
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
+                'X-Appwrite-Session': session.$id,
                 'Content-Type': 'application/json'
             }
         });
 
         if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error detallado:', errorData);
+            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
         }
 
         const data = await response.json();
