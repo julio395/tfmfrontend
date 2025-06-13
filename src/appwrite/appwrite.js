@@ -1,4 +1,4 @@
-import { Client, Account, Teams, Databases, Storage, ID } from 'appwrite';
+import { Client, Account, Teams, Databases, Storage, ID, Users } from 'appwrite';
 
 // Configuración del cliente de Appwrite
 const client = new Client()
@@ -164,8 +164,11 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Usar el SDK de Appwrite para obtener usuarios
-        const response = await client.users.list();
+        // Crear una instancia del servicio Users
+        const users = new Users(client);
+
+        // Usar el servicio Users para obtener la lista de usuarios
+        const response = await users.list();
         console.log('Respuesta de getUsers:', response);
 
         if (!response || !response.users) {
