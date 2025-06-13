@@ -173,14 +173,15 @@ export const getUsers = async () => {
             throw new Error('No hay sesión activa');
         }
 
-        // Hacer la petición a la API REST de Appwrite usando la API key y el token JWT
+        // Hacer la petición a la API REST de Appwrite usando la API key y el token de sesión
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
                 'Content-Type': 'application/json',
-                'X-Appwrite-JWT': session.providerAccessToken
+                'X-Appwrite-Session': session.$id,
+                'X-Appwrite-Response-Format': '1.0.0'
             }
         });
 
