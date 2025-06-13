@@ -158,30 +158,23 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        // Verificar si hay una sesión activa
-        const session = await account.getSession('current');
-        if (!session) {
-            throw new Error('No hay sesión activa');
-        }
-
         // Obtener el usuario actual
         const currentUser = await account.get();
         console.log('Usuario actual:', currentUser);
 
-        // Verificar si el usuario tiene la etiqueta admin
+        // Verificar si el usuario tiene la etiqueta admin en Labels
         if (!currentUser.labels || !currentUser.labels.includes('admin')) {
             throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
-        // Hacer la petición a la API REST de Appwrite usando el token de sesión
+        // Hacer la petición a la API REST de Appwrite usando la API key
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
-                'X-Appwrite-Session': session.$id,
+                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
                 'Content-Type': 'application/json'
-            },
-            credentials: 'include'
+            }
         });
 
         if (!response.ok) {
