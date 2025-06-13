@@ -104,7 +104,18 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     useEffect(() => {
         const fetchActivos = async () => {
             try {
+                setLoading(true);
+                setError(null);
+                
                 console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
+                
+                // Verificar la conexión con el backend primero
+                const healthCheck = await axiosInstance.get('/api/health');
+                if (!healthCheck.data || healthCheck.data.status !== 'ok') {
+                    throw new Error('El servidor backend no está respondiendo correctamente');
+                }
+
+                // Obtener los activos
                 const response = await axiosInstance.get('/api/tfm/Activos/all');
                 
                 if (!response.data || !Array.isArray(response.data)) {
@@ -190,10 +201,14 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 if (error.response) {
                     console.error('Respuesta del servidor:', error.response.data);
                     console.error('Estado:', error.response.status);
+                    setError(`Error del servidor: ${error.response.data.message || 'Error al cargar los activos'}`);
                 } else if (error.request) {
                     console.error('No se recibió respuesta del servidor');
+                    setError('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
+                } else {
+                    console.error('Error:', error.message);
+                    setError('Error al cargar los activos. Por favor, intente nuevamente.');
                 }
-                setError('Error al cargar los activos. Por favor, intente nuevamente.');
                 setLoading(false);
             }
         };
