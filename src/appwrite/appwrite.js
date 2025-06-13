@@ -158,42 +158,36 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        // Obtener la sesión actual
-        const session = await account.getSession('current');
-        if (!session) {
-            throw new Error('No hay sesión activa');
-        }
-
-        // Obtener el equipo del usuario
-        const teams = new Teams(client);
-        const userTeams = await teams.list();
-        
-        // Verificar si el usuario es administrador
-        const isAdmin = userTeams.teams.some(team => 
-            team.$id === process.env.REACT_APP_APPWRITE_TEAM_ID && 
-            team.roles.includes('admin')
-        );
-
-        if (!isAdmin) {
-            throw new Error('No tienes permisos para ver la lista de usuarios');
-        }
-
-        // Obtener usuarios usando el SDK
-        const response = await client.subscribe('users', (response) => {
-            return response.payload;
+        // Hacer la petición a la API REST de Appwrite usando la API key
+        const response = await fetch(`${client.config.endpoint}/users`, {
+            method: 'GET',
+            headers: {
+                'X-Appwrite-Project': client.config.project,
+                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
+                'Content-Type': 'application/json'
+            }
         });
 
-        console.log('Respuesta de getUsers:', response);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error detallado:', errorData);
+            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
+        }
 
-        if (!response || !Array.isArray(response)) {
+        const data = await response.json();
+        console.log('Respuesta de getUsers:', data);
+
+        if (!data || !data.users) {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        return response.map(user => ({
+        // Mapear todos los usuarios, indicando si son admin o user
+        return data.users.map(user => ({
             $id: user.$id,
             email: user.email,
             name: user.name,
-            labels: user.labels,
+            labels: user.labels || [],
+            role: user.labels && user.labels.includes('admin') ? 'admin' : 'user',
             status: user.status,
             createdAt: user.$createdAt,
             updatedAt: user.$updatedAt
