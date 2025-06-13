@@ -173,7 +173,8 @@ export const getUsers = async () => {
             headers: {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Appwrite-Scope': 'users.read'
             }
         });
 
