@@ -167,21 +167,13 @@ export const getUsers = async () => {
             throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
-        // Obtener la sesión actual
-        const session = await account.getSession('current');
-        if (!session) {
-            throw new Error('No hay sesión activa');
-        }
-
-        // Hacer la petición a la API REST de Appwrite usando la API key y el token de sesión
+        // Hacer la petición a la API REST de Appwrite usando solo la API key
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
                 'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'Content-Type': 'application/json',
-                'X-Appwrite-Session': session.$id,
-                'X-Appwrite-Response-Format': '1.0.0'
+                'Content-Type': 'application/json'
             }
         });
 

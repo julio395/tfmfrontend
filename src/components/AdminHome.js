@@ -128,22 +128,16 @@ const AdminHome = ({ userData, onLogout }) => {
       setIsLoading(true);
       setErrorMessage(null);
       
-      const session = await account.getSession('current');
-      if (!session) {
-        throw new Error('No hay sesión activa');
-      }
-
+      // Obtener el usuario actual
       const currentUser = await account.get();
       console.log('Usuario actual en checkAuth:', currentUser);
 
+      // Verificar si el usuario tiene la etiqueta admin
       if (!currentUser.labels?.includes('admin')) {
         throw new Error('No tienes permisos de administrador');
       }
 
-      if (!session.providerAccessToken) {
-        throw new Error('Token de acceso no disponible');
-      }
-
+      // Intentar obtener la lista de usuarios
       await fetchUsers();
     } catch (error) {
       console.error('Error en checkAuth:', error);
@@ -159,20 +153,13 @@ const AdminHome = ({ userData, onLogout }) => {
       setIsLoading(true);
       setErrorMessage(null);
       
-      const session = await account.getSession('current');
-      if (!session) {
-        throw new Error('No hay sesión activa');
-      }
-
-      if (!session.providerAccessToken) {
-        throw new Error('Token de acceso no disponible');
-      }
-
+      // Obtener el usuario actual para verificar permisos
       const currentUser = await account.get();
       if (!currentUser.labels?.includes('admin')) {
         throw new Error('No tienes permisos de administrador');
       }
 
+      // Obtener la lista de usuarios
       const users = await getUsers();
       console.log('Usuarios obtenidos:', users);
       
