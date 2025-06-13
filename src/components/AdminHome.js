@@ -153,12 +153,15 @@ const AdminHome = ({ userData, onLogout }) => {
       setIsLoading(true);
       setErrorMessage(null);
       
-      const response = await getUsers();
-      if (response && response.users) {
-        setUsers(response.users);
+      const users = await getUsers();
+      console.log('Usuarios obtenidos:', users);
+      
+      if (users && users.length > 0) {
+        setUsers(users);
       } else {
         console.log('No se encontraron usuarios');
         setUsers([]);
+        setErrorMessage('No se encontraron usuarios en el sistema');
       }
     } catch (error) {
       console.error('Error en fetchUsers:', error);
@@ -229,47 +232,64 @@ const AdminHome = ({ userData, onLogout }) => {
   const renderUsersView = () => (
     <div>
       <h2>Gestión de Usuarios (Appwrite)</h2>
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Nombre</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.$id}>
-                <td>{user.email}</td>
-                <td>{user.name || 'Sin nombre'}</td>
-                <td>{user.labels?.includes('admin') ? 'Admin' : 'Usuario'}</td>
-                <td>{user.status || 'Activo'}</td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setModalData(user);
-                      setModalType('update');
-                      setShowModal(true);
-                    }}
-                    className="btn-edit"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleUserDelete(user.$id)}
-                    className="btn-delete"
-                  >
-                    Eliminar
-                  </button>
-                </td>
+      {errorMessage && (
+        <div className="error-message">
+          {errorMessage}
+        </div>
+      )}
+      {isLoading ? (
+        <div className="loading">Cargando usuarios...</div>
+      ) : (
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Nombre</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {users.length > 0 ? (
+                users.map(user => (
+                  <tr key={user.$id}>
+                    <td>{user.email}</td>
+                    <td>{user.name || 'Sin nombre'}</td>
+                    <td>{user.labels?.includes('admin') ? 'Admin' : 'Usuario'}</td>
+                    <td>{user.status ? 'Activo' : 'Inactivo'}</td>
+                    <td>
+                      <button
+                        onClick={() => {
+                          setModalData(user);
+                          setModalType('update');
+                          setShowModal(true);
+                        }}
+                        className="btn-edit"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleUserDelete(user.$id)}
+                        className="btn-delete"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="no-data">
+                    No hay usuarios registrados
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 

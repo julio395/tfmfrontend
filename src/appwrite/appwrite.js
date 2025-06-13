@@ -158,12 +158,16 @@ export const logoutUser = async () => {
 
 export const getUsers = async () => {
     try {
-        const response = await teams.list();
-        return response.teams.map(team => ({
-            id: team.$id,
-            name: team.name,
-            role: team.role,
-            status: team.status
+        const response = await account.list();
+        console.log('Respuesta de getUsers:', response);
+        return response.users.map(user => ({
+            $id: user.$id,
+            email: user.email,
+            name: user.name,
+            labels: user.labels,
+            status: user.status,
+            createdAt: user.$createdAt,
+            updatedAt: user.$updatedAt
         }));
     } catch (error) {
         console.error('Error al obtener usuarios:', error);
