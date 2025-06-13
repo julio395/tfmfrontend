@@ -120,31 +120,46 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 setLoading(true);
                 setError(null);
                 
-                console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
+                console.log('Iniciando verificación de MongoDB...');
                 
                 // Verificar la conexión con MongoDB primero
                 try {
+                    console.log('Intentando conectar con MongoDB...');
                     const mongoStatus = await axiosInstance.get('/api/mongodb-status');
+                    console.log('Respuesta de MongoDB:', mongoStatus.data);
+                    
                     if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
                         throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
                     }
                 } catch (mongoError) {
-                    console.error('Error al verificar estado de MongoDB:', mongoError);
+                    console.error('Error detallado al verificar MongoDB:', {
+                        message: mongoError.message,
+                        response: mongoError.response?.data,
+                        status: mongoError.response?.status
+                    });
                     throw new Error('No se pudo verificar la conexión con la base de datos. Por favor, contacte al administrador.');
                 }
 
-                // Obtener los activos
-                const response = await axiosInstance.get('/api/tfm/Activos/all');
+                // Obtener los activos con timeout más corto
+                console.log('Intentando obtener activos...');
+                const activosResponse = await Promise.race([
+                    axiosInstance.get('/api/tfm/Activos/all'),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout: La petición ha excedido el tiempo de espera')), 5000)
+                    )
+                ]);
                 
-                if (!response.data || !Array.isArray(response.data)) {
-                    console.error('Formato de respuesta inválido:', response.data);
+                console.log('Respuesta de activos recibida:', activosResponse.data);
+                
+                if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
+                    console.error('Formato de respuesta inválido:', activosResponse.data);
                     setError('Formato de datos inválido recibido del servidor');
                     setLoading(false);
                     return;
                 }
 
                 // Filtrar activos que tengan categoría
-                const activosFiltrados = response.data.filter(activo => activo && activo.Categoría);
+                const activosFiltrados = activosResponse.data.filter(activo => activo && activo.Categoría);
                 
                 if (activosFiltrados.length === 0) {
                     console.error('No se encontraron activos con categoría');
@@ -215,8 +230,16 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 setLoading(false);
             } catch (error) {
-                console.error('Error al cargar activos:', error);
-                if (error.response) {
+                console.error('Error detallado al cargar activos:', {
+                    message: error.message,
+                    response: error.response?.data,
+                    status: error.response?.status,
+                    code: error.code
+                });
+                
+                if (error.message.includes('Timeout')) {
+                    setError('El servidor está tardando demasiado en responder. Por favor, intente nuevamente más tarde.');
+                } else if (error.response) {
                     console.error('Respuesta del servidor:', error.response.data);
                     console.error('Estado:', error.response.status);
                     if (error.response.data.error && error.response.data.error.includes('listCollections')) {
