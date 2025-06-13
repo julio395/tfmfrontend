@@ -109,10 +109,10 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 console.log('Intentando obtener activos de:', `${API_URL}/api/tfm/Activos/all`);
                 
-                // Verificar la conexión con el backend primero
-                const healthCheck = await axiosInstance.get('/api/health');
-                if (!healthCheck.data || healthCheck.data.status !== 'ok') {
-                    throw new Error('El servidor backend no está respondiendo correctamente');
+                // Verificar la conexión con MongoDB primero
+                const mongoStatus = await axiosInstance.get('/api/mongodb-status');
+                if (!mongoStatus.data || mongoStatus.data.status !== 'connected') {
+                    throw new Error('No se pudo conectar con la base de datos. Por favor, contacte al administrador.');
                 }
 
                 // Obtener los activos
@@ -201,13 +201,17 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 if (error.response) {
                     console.error('Respuesta del servidor:', error.response.data);
                     console.error('Estado:', error.response.status);
-                    setError(`Error del servidor: ${error.response.data.message || 'Error al cargar los activos'}`);
+                    if (error.response.data.error && error.response.data.error.includes('listCollections')) {
+                        setError('Error de conexión con la base de datos. Por favor, contacte al administrador.');
+                    } else {
+                        setError(`Error del servidor: ${error.response.data.message || 'Error al cargar los activos'}`);
+                    }
                 } else if (error.request) {
                     console.error('No se recibió respuesta del servidor');
                     setError('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
                 } else {
                     console.error('Error:', error.message);
-                    setError('Error al cargar los activos. Por favor, intente nuevamente.');
+                    setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
                 }
                 setLoading(false);
             }
