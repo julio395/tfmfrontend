@@ -139,8 +139,12 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     });
                     console.log('Estado del backend:', healthCheck.data);
                     
-                    if (healthCheck.data.mongodb?.status === 'disconnected') {
-                        throw new Error('La base de datos MongoDB está desconectada. Por favor, contacte al administrador para verificar la conexión.');
+                    if (healthCheck.data.status === 'error') {
+                        if (healthCheck.data.error?.includes('listCollections')) {
+                            throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
+                        } else {
+                            throw new Error(healthCheck.data.error || 'Error interno del servidor');
+                        }
                     }
                 } catch (healthError) {
                     console.error('Error detallado al verificar el backend:', {
@@ -151,10 +155,10 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                         stack: healthError.stack
                     });
                     
-                    if (healthError.response?.data?.mongodb?.status === 'disconnected') {
-                        throw new Error('La base de datos MongoDB está desconectada. Por favor, contacte al administrador para verificar la conexión.');
+                    if (healthError.response?.data?.error?.includes('listCollections')) {
+                        throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
                     } else if (healthError.response?.status === 500) {
-                        throw new Error('Error interno del servidor. Por favor, contacte al administrador.');
+                        throw new Error(healthError.response?.data?.error || 'Error interno del servidor');
                     } else {
                         throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
                     }
@@ -174,7 +178,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     if (activosResponse.data?.error?.includes('listCollections')) {
                         throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
                     } else {
-                        throw new Error('Error interno del servidor al obtener los activos.');
+                        throw new Error(activosResponse.data?.error || 'Error interno del servidor al obtener los activos.');
                     }
                 }
                 
