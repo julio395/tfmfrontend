@@ -4,11 +4,7 @@ import { Client, Account, Teams, Databases, Storage, ID, Users, Query } from 'ap
 const client = new Client()
     .setEndpoint('https://cloud.appwrite.io/v1')
     .setProject('6640c2a3000c0c3a3c8c')
-    .setLocale('es')
-    .setSelfSigned(true);
-
-// Configurar el cliente para usar cookies en lugar de localStorage
-client.setSessionStorage('cookie');
+    .setLocale('es');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
