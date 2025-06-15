@@ -2,8 +2,8 @@ import { Client, Account, Teams, Databases, Storage, ID, Users, Query } from 'ap
 
 // Configuración del cliente de Appwrite
 const client = new Client()
-    .setEndpoint('https://cloud.appwrite.io/v1')
-    .setProject('6640c2a3000c0c3a3c8c')
+    .setEndpoint('https://appwrite-tfm.julio.coolify.hgccarlos.es/v1')
+    .setProject('683f418d003d466cfe2e')
     .setLocale('es');
 
 // Crear instancias de los servicios de Appwrite
