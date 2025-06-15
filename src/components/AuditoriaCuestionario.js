@@ -178,7 +178,14 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 console.log('Estado del backend:', healthCheck.data);
                 
                 if (healthCheck.status !== 200 || healthCheck.data.status === 'error') {
-                    throw new Error(healthCheck.data.error || 'Error al verificar el estado del servidor');
+                    const errorDetails = healthCheck.data.mongodb?.details || {};
+                    const errorMessage = `Error de conexión con la base de datos: ${errorDetails.message || healthCheck.data.error}`;
+                    console.error('Error detallado:', {
+                        status: healthCheck.status,
+                        data: healthCheck.data,
+                        mongodb: healthCheck.data.mongodb
+                    });
+                    throw new Error(errorMessage);
                 }
 
                 // Verificar la conexión a MongoDB con reintentos
