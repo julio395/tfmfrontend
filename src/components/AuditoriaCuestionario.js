@@ -9,7 +9,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 120000,
+    timeout: 60000,
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -129,104 +129,120 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
         console.log('Estructura completa de userData:', JSON.stringify(userData, null, 2));
     }, [userData]);
 
-    // Función para verificar la conexión al backend
-    const verificarConexionBackend = async () => {
-        try {
-            console.log('Iniciando verificación de conexión con el backend...');
-            const response = await axiosInstance.get('/api/health', {
-                timeout: 120000,
-                validateStatus: function (status) {
-                    return true;
-                }
-            });
-            
-            console.log('Respuesta del health check:', response.data);
-            
-            if (response.data.status === 'error') {
-                throw new Error(response.data.error || 'Error al verificar el estado del servidor');
-            }
-            
-            if (response.data.status === 'warning') {
-                console.warn('Advertencia del servidor:', response.data.message);
-                // No lanzamos error, pero registramos la advertencia
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('Error al verificar conexión con el backend:', {
-                message: error.message,
-                code: error.code,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            throw error;
-        }
-    };
-
-    // Modificar la función fetchActivos para incluir verificación de conexión
-    const fetchActivos = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            // Verificar conexión al backend primero
-            await verificarConexionBackend();
-            
-            // Obtener los activos
-            console.log('Intentando obtener activos...');
-            const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
-                timeout: 120000
-            });
-
-            if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
-                throw new Error('Formato de datos inválido recibido del servidor');
-            }
-
-            // Filtrar activos que tengan categoría
-            const activosFiltrados = activosResponse.data.filter(activo => activo && activo.Categoría);
-            
-            if (activosFiltrados.length === 0) {
-                throw new Error('No se encontraron activos con categoría en la base de datos');
-            }
-
-            console.log('Activos obtenidos:', activosFiltrados.length);
-            setActivos(activosFiltrados);
-            
-            // Extraer categorías únicas
-            const categoriasUnicas = [...new Set(activosFiltrados.map(activo => activo.Categoría))];
-            
-            if (categoriasUnicas.length === 0) {
-                throw new Error('No se encontraron categorías en los activos');
-            }
-
-            setCategorias(categoriasUnicas);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error al cargar activos:', {
-                message: error.message,
-                code: error.code,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-            
-            let mensajeError = 'Error al cargar los activos. ';
-            
-            if (error.code === 'ECONNABORTED') {
-                mensajeError += 'El servidor está tardando demasiado en responder. Por favor, intente nuevamente.';
-            } else if (error.code === 'ERR_NETWORK') {
-                mensajeError += 'No se pudo conectar con el servidor. Por favor, verifica tu conexión.';
-            } else if (error.response?.data?.error) {
-                mensajeError += error.response.data.error;
-            } else {
-                mensajeError += error.message || 'Por favor, intente nuevamente.';
-            }
-            
-            setError(mensajeError);
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const fetchActivos = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                console.log('Iniciando verificación de conexión con el backend...');
+                
+                // Verificar el estado del backend
+                const healthCheck = await axios.get(`${API_URL}/api/health`, { 
+                    timeout: 30000,
+                    validateStatus: function (status) {
+                        return true;
+                    }
+                });
+                
+                console.log('Estado del backend:', healthCheck.data);
+                
+                if (healthCheck.status !== 200 || healthCheck.data.status === 'error') {
+                    throw new Error(healthCheck.data.error || 'Error al verificar el estado del servidor');
+                }
+
+                // Verificar la conexión a MongoDB
+                const mongoStatus = await axios.get(`${API_URL}/api/mongodb-status`, {
+                    timeout: 30000,
+                    validateStatus: function (status) {
+                        return true;
+                    }
+                });
+
+                if (mongoStatus.status !== 200 || mongoStatus.data.status !== 'connected') {
+                    throw new Error('Error de conexión con la base de datos');
+                }
+
+                // Obtener los activos
+                console.log('Intentando obtener activos...');
+                const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
+                    timeout: 30000
+                });
+
+                if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
+                    throw new Error('Formato de datos inválido recibido del servidor');
+                }
+
+                // Filtrar activos que tengan categoría
+                const activosFiltrados = activosResponse.data.filter(activo => activo && activo.Categoría);
+                
+                if (activosFiltrados.length === 0) {
+                    throw new Error('No se encontraron activos con categoría en la base de datos');
+                }
+
+                console.log('Activos obtenidos:', activosFiltrados.length);
+                setActivos(activosFiltrados);
+                
+                // Extraer categorías únicas
+                const categoriasUnicas = [...new Set(activosFiltrados.map(activo => activo.Categoría))];
+                
+                if (categoriasUnicas.length === 0) {
+                    throw new Error('No se encontraron categorías en los activos');
+                }
+
+                setCategorias(categoriasUnicas);
+                
+                // Inicializar respuestas
+                if (!borradoresCargados) {
+                    const respuestasIniciales = {};
+                    categoriasUnicas.forEach(categoria => {
+                        respuestasIniciales[categoria] = {
+                            cantidad: 0,
+                            detalles: []
+                        };
+                    });
+                    setRespuestas(respuestasIniciales);
+                }
+                
+                // Agrupar activos por categoría
+                const modelosPorCategoria = {};
+                categoriasUnicas.forEach(categoria => {
+                    const activosCategoria = activosFiltrados
+                        .filter(activo => activo.Categoría === categoria)
+                        .map(activo => ({
+                            nombre: activo.Nombre || '',
+                            proveedor: activo.Proveedor || ''
+                        }));
+
+                    const nombresUnicos = [...new Set(activosCategoria.map(activo => activo.nombre))]
+                        .filter(nombre => nombre)
+                        .map(nombre => {
+                            const activo = activosCategoria.find(a => a.nombre === nombre);
+                            return {
+                                nombre: nombre,
+                                proveedor: activo?.proveedor || ''
+                            };
+                        });
+
+                    const proveedoresUnicos = [...new Set(activosCategoria
+                        .filter(activo => activo.proveedor)
+                        .map(activo => activo.proveedor))];
+
+                    modelosPorCategoria[categoria] = {
+                        nombres: nombresUnicos,
+                        proveedores: proveedoresUnicos
+                    };
+                });
+                
+                setModelos(modelosPorCategoria);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error al cargar activos:', error);
+                setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
+                setLoading(false);
+            }
+        };
+
         fetchActivos();
     }, []);
 
