@@ -9,7 +9,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 120000,
+    timeout: 60000,
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -18,39 +18,11 @@ const axiosInstance = axios.create({
     }
 });
 
-// Función para reintentar peticiones
-const retryRequest = async (requestFn, maxRetries = 3, delay = 5000) => {
-    let lastError;
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            console.log(`Intento ${i + 1} de ${maxRetries}...`);
-            return await requestFn();
-        } catch (error) {
-            lastError = error;
-            console.error(`Error en intento ${i + 1}:`, error);
-            if (i < maxRetries - 1) {
-                console.log(`Esperando ${delay/1000} segundos antes de reintentar...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-    }
-    throw lastError;
-};
-
 // Interceptor para manejar errores de red
 axiosInstance.interceptors.response.use(
-    response => {
-        console.log('Respuesta recibida:', {
-            url: response.config.url,
-            status: response.status,
-            data: response.data
-        });
-        return response;
-    },
+    response => response,
     error => {
         console.error('Error en la petición:', {
-            url: error.config?.url,
-            method: error.config?.method,
             message: error.message,
             response: error.response?.data,
             status: error.response?.status,
@@ -165,52 +137,36 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 console.log('Iniciando verificación de conexión con el backend...');
                 
-                // Verificar el estado del backend con reintentos
-                const healthCheck = await retryRequest(async () => {
-                    return await axios.get(`${API_URL}/api/health`, { 
-                        timeout: 120000,
-                        validateStatus: function (status) {
-                            return true;
-                        }
-                    });
+                // Verificar el estado del backend
+                const healthCheck = await axios.get(`${API_URL}/api/health`, { 
+                    timeout: 30000,
+                    validateStatus: function (status) {
+                        return true;
+                    }
                 });
                 
                 console.log('Estado del backend:', healthCheck.data);
                 
                 if (healthCheck.status !== 200 || healthCheck.data.status === 'error') {
-                    const errorDetails = healthCheck.data.mongodb?.details || {};
-                    const errorMessage = `Error de conexión con la base de datos: ${errorDetails.message || healthCheck.data.error}`;
-                    console.error('Error detallado:', {
-                        status: healthCheck.status,
-                        data: healthCheck.data,
-                        mongodb: healthCheck.data.mongodb
-                    });
-                    throw new Error(errorMessage);
+                    throw new Error(healthCheck.data.error || 'Error al verificar el estado del servidor');
                 }
 
-                // Verificar la conexión a MongoDB con reintentos
-                console.log('Verificando estado de MongoDB...');
-                const mongoStatus = await retryRequest(async () => {
-                    return await axios.get(`${API_URL}/api/mongodb-status`, {
-                        timeout: 120000,
-                        validateStatus: function (status) {
-                            return true;
-                        }
-                    });
+                // Verificar la conexión a MongoDB
+                const mongoStatus = await axios.get(`${API_URL}/api/mongodb-status`, {
+                    timeout: 30000,
+                    validateStatus: function (status) {
+                        return true;
+                    }
                 });
-
-                console.log('Estado de MongoDB:', mongoStatus.data);
 
                 if (mongoStatus.status !== 200 || mongoStatus.data.status !== 'connected') {
                     throw new Error('Error de conexión con la base de datos');
                 }
 
-                // Obtener los activos con reintentos
+                // Obtener los activos
                 console.log('Intentando obtener activos...');
-                const activosResponse = await retryRequest(async () => {
-                    return await axiosInstance.get('/api/tfm/Activos/all', { 
-                        timeout: 120000
-                    });
+                const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
+                    timeout: 30000
                 });
 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
