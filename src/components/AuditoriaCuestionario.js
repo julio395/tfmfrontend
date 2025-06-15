@@ -20,9 +20,18 @@ const axiosInstance = axios.create({
 
 // Interceptor para manejar errores de red
 axiosInstance.interceptors.response.use(
-    response => response,
+    response => {
+        console.log('Respuesta recibida:', {
+            url: response.config.url,
+            status: response.status,
+            data: response.data
+        });
+        return response;
+    },
     error => {
         console.error('Error en la petición:', {
+            url: error.config?.url,
+            method: error.config?.method,
             message: error.message,
             response: error.response?.data,
             status: error.response?.status,
@@ -139,7 +148,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 // Verificar el estado del backend
                 const healthCheck = await axios.get(`${API_URL}/api/health`, { 
-                    timeout: 30000,
+                    timeout: 60000,
                     validateStatus: function (status) {
                         return true;
                     }
@@ -152,12 +161,15 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 }
 
                 // Verificar la conexión a MongoDB
+                console.log('Verificando estado de MongoDB...');
                 const mongoStatus = await axios.get(`${API_URL}/api/mongodb-status`, {
-                    timeout: 30000,
+                    timeout: 60000,
                     validateStatus: function (status) {
                         return true;
                     }
                 });
+
+                console.log('Estado de MongoDB:', mongoStatus.data);
 
                 if (mongoStatus.status !== 200 || mongoStatus.data.status !== 'connected') {
                     throw new Error('Error de conexión con la base de datos');
@@ -166,7 +178,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 // Obtener los activos
                 console.log('Intentando obtener activos...');
                 const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
-                    timeout: 30000
+                    timeout: 60000
                 });
 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
