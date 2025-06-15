@@ -132,21 +132,28 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     // Función para verificar la conexión al backend
     const verificarConexionBackend = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/health`, {
+            console.log('Verificando conexión al backend...');
+            const response = await axiosInstance.get('/api/health', {
                 timeout: 30000,
                 validateStatus: function (status) {
-                    return true;
+                    return status < 500; // Aceptar cualquier status menor a 500
                 }
             });
             
-            if (response.status !== 200 || response.data.status === 'error') {
+            console.log('Respuesta del health check:', response.data);
+            
+            if (response.status !== 200) {
                 throw new Error(response.data.error || 'Error al verificar el estado del servidor');
+            }
+            
+            if (response.data.status === 'error') {
+                throw new Error(response.data.error || 'Error en el servidor');
             }
             
             return true;
         } catch (error) {
             console.error('Error al verificar conexión con el backend:', error);
-            throw error;
+            throw new Error('Error de conexión con la base de datos');
         }
     };
 
