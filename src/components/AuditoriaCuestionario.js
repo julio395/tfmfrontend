@@ -132,20 +132,33 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     // Función para verificar la conexión al backend
     const verificarConexionBackend = async () => {
         try {
-            const response = await axios.get(`${API_URL}/api/health`, {
-                timeout: 30000,
+            console.log('Iniciando verificación de conexión con el backend...');
+            const response = await axiosInstance.get('/api/health', {
+                timeout: 120000,
                 validateStatus: function (status) {
                     return true;
                 }
             });
             
-            if (response.status !== 200 || response.data.status === 'error') {
+            console.log('Respuesta del health check:', response.data);
+            
+            if (response.data.status === 'error') {
                 throw new Error(response.data.error || 'Error al verificar el estado del servidor');
+            }
+            
+            if (response.data.status === 'warning') {
+                console.warn('Advertencia del servidor:', response.data.message);
+                // No lanzamos error, pero registramos la advertencia
             }
             
             return true;
         } catch (error) {
-            console.error('Error al verificar conexión con el backend:', error);
+            console.error('Error al verificar conexión con el backend:', {
+                message: error.message,
+                code: error.code,
+                response: error.response?.data,
+                status: error.response?.status
+            });
             throw error;
         }
     };
@@ -189,8 +202,26 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
             setCategorias(categoriasUnicas);
             setLoading(false);
         } catch (error) {
-            console.error('Error al cargar activos:', error);
-            setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
+            console.error('Error al cargar activos:', {
+                message: error.message,
+                code: error.code,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+            
+            let mensajeError = 'Error al cargar los activos. ';
+            
+            if (error.code === 'ECONNABORTED') {
+                mensajeError += 'El servidor está tardando demasiado en responder. Por favor, intente nuevamente.';
+            } else if (error.code === 'ERR_NETWORK') {
+                mensajeError += 'No se pudo conectar con el servidor. Por favor, verifica tu conexión.';
+            } else if (error.response?.data?.error) {
+                mensajeError += error.response.data.error;
+            } else {
+                mensajeError += error.message || 'Por favor, intente nuevamente.';
+            }
+            
+            setError(mensajeError);
             setLoading(false);
         }
     };
