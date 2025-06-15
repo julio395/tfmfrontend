@@ -9,7 +9,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 30000,
+    timeout: 60000,
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ axiosInstance.interceptors.response.use(
         });
         
         if (error.code === 'ECONNABORTED') {
-            return Promise.reject(new Error('La petición ha excedido el tiempo de espera. Por favor, intente nuevamente.'));
+            return Promise.reject(new Error('El servidor está tardando demasiado en responder. Por favor, intente nuevamente.'));
         }
         if (error.code === 'ERR_NETWORK') {
             return Promise.reject(new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.'));
@@ -139,7 +139,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 // Verificar el estado del backend
                 const healthCheck = await axios.get(`${API_URL}/api/health`, { 
-                    timeout: 10000,
+                    timeout: 30000,
                     validateStatus: function (status) {
                         return true;
                     }
@@ -153,7 +153,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
                 // Verificar la conexión a MongoDB
                 const mongoStatus = await axios.get(`${API_URL}/api/mongodb-status`, {
-                    timeout: 10000,
+                    timeout: 30000,
                     validateStatus: function (status) {
                         return true;
                     }
@@ -166,7 +166,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 // Obtener los activos
                 console.log('Intentando obtener activos...');
                 const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
-                    timeout: 15000
+                    timeout: 30000
                 });
 
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
