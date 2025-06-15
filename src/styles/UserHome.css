@@ -1,6 +1,6 @@
 .user-home {
   min-height: 100vh;
-  background-color: #f8f9fa;
+  background-color: #f5f5f5;
 }
 
 .user-home main {
@@ -111,4 +111,111 @@
   min-height: 100vh;
   font-size: 1.2rem;
   color: #dc3545;
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-header p {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.dashboard-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.action-button {
+  background-color: #1976d2;
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.action-button:hover {
+  background-color: #1565c0;
+}
+
+/* Estilos para el gráfico de araña */
+.recharts-wrapper {
+  margin: 0 auto;
+}
+
+.recharts-polar-angle-axis-tick-value {
+  font-size: 12px;
+  fill: #666;
+}
+
+.recharts-legend-item-text {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Estilos para el contenedor del gráfico */
+.chart-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Estilos para el título del gráfico */
+.chart-title {
+  text-align: center;
+  color: #333;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+/* Estilos para la leyenda */
+.recharts-legend-wrapper {
+  padding: 1rem;
+}
+
+/* Estilos para las líneas del gráfico */
+.recharts-polar-grid-angle line {
+  stroke: #ddd;
+}
+
+.recharts-polar-grid-concentric circle {
+  stroke: #ddd;
+}
+
+/* Estilos para los textos de las categorías */
+.recharts-polar-angle-axis-tick-value {
+  font-weight: 500;
+}
+
+/* Estilos para el contenedor del gráfico responsivo */
+.responsive-container {
+  width: 100%;
+  height: 500px;
+  margin: 0 auto;
+}
+
+/* Estilos para el papel que contiene el gráfico */
+.MuiPaper-root {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(5px);
 } 

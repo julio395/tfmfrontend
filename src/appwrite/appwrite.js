@@ -1,10 +1,14 @@
-import { Client, Account, Teams, Databases, Storage, ID, Users } from 'appwrite';
+import { Client, Account, Teams, Databases, Storage, ID, Users, Query } from 'appwrite';
 
 // Configuración del cliente de Appwrite
 const client = new Client()
-    .setEndpoint('https://appwrite-tfm.julio.coolify.hgccarlos.es/v1')
-    .setProject('683f418d003d466cfe2e')
-    .setLocale('es');
+    .setEndpoint('https://cloud.appwrite.io/v1')
+    .setProject('6640c2a3000c0c3a3c8c')
+    .setLocale('es')
+    .setSelfSigned(true);
+
+// Configurar el cliente para usar cookies en lugar de localStorage
+client.setSessionStorage('cookie');
 
 // Crear instancias de los servicios de Appwrite
 const account = new Account(client);
@@ -35,15 +39,29 @@ export const checkSession = async () => {
 
 export const createUser = async (email, password, name) => {
     try {
-        const user = await account.create(
-            ID.unique(),
-            email,
-            password,
-            name
-        );
-        return user;
+        const response = await fetch(`${client.config.endpoint}/users`, {
+            method: 'POST',
+            headers: {
+                'X-Appwrite-Project': client.config.project,
+                'Content-Type': 'application/json',
+                'X-Appwrite-Response-Format': '1.0.0',
+                'X-Appwrite-Key': client.config.key
+            },
+            body: JSON.stringify({
+                email,
+                password,
+                name
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al crear usuario');
+        }
+
+        return await response.json();
     } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('Error al crear usuario:', error);
         throw error;
     }
 };
@@ -167,20 +185,21 @@ export const getUsers = async () => {
             throw new Error('No tienes permisos para ver la lista de usuarios');
         }
 
-        // Hacer la petición a la API REST de Appwrite usando solo la API key
+        // Obtener la lista de usuarios usando el SDK de Appwrite
         const response = await fetch(`${client.config.endpoint}/users`, {
             method: 'GET',
             headers: {
                 'X-Appwrite-Project': client.config.project,
-                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Appwrite-Response-Format': '1.0.0',
+                'X-Appwrite-Key': process.env.REACT_APP_APPWRITE_API_KEY
             }
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+            const errorData = await response.json();
             console.error('Error detallado:', errorData);
-            throw new Error(`Error HTTP: ${response.status} - ${errorData.message || 'Error desconocido'}`);
+            throw new Error(`Error HTTP: ${response.status}`);
         }
 
         const data = await response.json();
@@ -190,7 +209,6 @@ export const getUsers = async () => {
             throw new Error('No se pudieron obtener los usuarios');
         }
 
-        // Mapear todos los usuarios, manteniendo solo la información básica
         return data.users.map(user => ({
             $id: user.$id,
             email: user.email,
@@ -379,6 +397,57 @@ export const deleteMongoDBItem = async (collection, id) => {
         return result;
     } catch (error) {
         console.error(`Error al eliminar item en ${collection}:`, error);
+        throw error;
+    }
+};
+
+// Función para actualizar un usuario
+export const updateUser = async (userId, data) => {
+    try {
+        const response = await fetch(`${client.config.endpoint}/users/${userId}`, {
+            method: 'PATCH',
+            headers: {
+                'X-Appwrite-Project': client.config.project,
+                'Content-Type': 'application/json',
+                'X-Appwrite-Response-Format': '1.0.0',
+                'X-Appwrite-Key': client.config.key
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al actualizar usuario');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error al actualizar usuario:', error);
+        throw error;
+    }
+};
+
+// Función para eliminar un usuario
+export const deleteUser = async (userId) => {
+    try {
+        const response = await fetch(`${client.config.endpoint}/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Appwrite-Project': client.config.project,
+                'Content-Type': 'application/json',
+                'X-Appwrite-Response-Format': '1.0.0',
+                'X-Appwrite-Key': client.config.key
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Error al eliminar usuario');
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error al eliminar usuario:', error);
         throw error;
     }
 };

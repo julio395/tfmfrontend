@@ -1,152 +1,61 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { logoutUser, getCurrentUser } from '../appwrite/appwrite';
+import '../styles/Navbar.css';
 
-const Navbar = ({ userData, role, onLogout }) => {
-  const [showProfile, setShowProfile] = useState(false);
+const Navbar = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData);
+      } catch (error) {
+        console.error('Error al obtener el usuario:', error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const handleLogout = async (e) => {
     e.preventDefault();
     try {
-      await onLogout();
-      // Forzar la redirección al login
-      window.location.href = '/login';
+      await logoutUser();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
-      // Incluso si hay error, forzamos la redirección
+    } finally {
+      // Limpiar el estado local y redirigir independientemente del resultado
+      setUser(null);
+      setShowDropdown(false);
+      // Forzar la redirección a login
       window.location.href = '/login';
     }
   };
 
   return (
-    <nav style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '1rem 2rem',
-      backgroundColor: '#fff',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 1000
-    }}>
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        {role === 'user' ? (
-          <>
-            <button 
-              onClick={() => navigate('/home')}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                color: '#333',
-                fontWeight: '500',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-            >
-              Inicio
-            </button>
-            <button 
-              onClick={() => navigate('/auditorias')}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                color: '#333',
-                fontWeight: '500',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-            >
-              Documentos de Auditorías
-            </button>
-          </>
-        ) : (
-          <button 
-            onClick={() => navigate('/admin')}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              color: '#333',
-              fontWeight: '500',
-              padding: '0.5rem 1rem',
-              borderRadius: '4px',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-            onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-          >
-            Inicio
-          </button>
-        )}
+    <nav className="navbar">
+      <div className="navbar-brand">
+        <h1>TFM</h1>
       </div>
-
-      <div style={{ position: 'relative' }}>
-        <button
-          onClick={() => setShowProfile(!showProfile)}
-          style={{
-            background: 'none',
-            border: '1px solid #ddd',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.5rem 1rem',
-            borderRadius: '4px',
-            color: '#333',
-            fontWeight: '500',
-            transition: 'all 0.2s'
-          }}
-          onMouseOver={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-          onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+      <div className="user-menu">
+        <button 
+          className="user-button"
+          onClick={() => setShowDropdown(!showDropdown)}
         >
-          <span>{userData?.name || 'Usuario'}</span>
-          <span style={{ fontSize: '0.8rem' }}>▼</span>
+          {user?.name || 'Usuario'}
+          <span className={`dropdown-arrow ${showDropdown ? 'up' : 'down'}`}>▼</span>
         </button>
-
-        {showProfile && (
-          <div style={{
-            position: 'absolute',
-            right: 0,
-            top: '100%',
-            backgroundColor: '#fff',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            borderRadius: '4px',
-            padding: '1rem',
-            minWidth: '200px',
-            marginTop: '0.5rem',
-            border: '1px solid #ddd'
-          }}>
-            <div style={{ marginBottom: '1rem', color: '#333' }}>
-              <p style={{ margin: '0' }}><strong>Email:</strong> {userData?.email}</p>
+        {showDropdown && (
+          <div className="dropdown-menu">
+            <div className="user-info">
+              <p><strong>Nombre:</strong> {user?.name}</p>
+              <p><strong>Email:</strong> {user?.email}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: '#dc3545',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#c82333'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#dc3545'}
-            >
+            <button className="logout-button" onClick={handleLogout}>
               Cerrar Sesión
             </button>
           </div>

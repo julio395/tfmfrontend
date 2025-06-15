@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Slider, Select, MenuItem, FormControl, InputLabel, Paper, Grid, ButtonGroup, IconButton } from '@mui/material';
+import { Box, Typography, TextField, Button, Slider, Select, MenuItem, FormControl, InputLabel, Paper, Grid, ButtonGroup, IconButton, FormControlLabel, Radio, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, Container, Snackbar, Alert } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import SaveIcon from '@mui/icons-material/Save';
+import AddIcon from '@mui/icons-material/Add';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.coolify.hgccarlos.es';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Configuración de Axios
 const axiosInstance = axios.create({
@@ -53,6 +56,7 @@ axiosInstance.interceptors.response.use(
 );
 
 const AuditoriaCuestionario = ({ onCancel, userData }) => {
+    const navigate = useNavigate();
     const [activos, setActivos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [respuestas, setRespuestas] = useState({});
@@ -64,6 +68,20 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
     const [procesadoIA, setProcesadoIA] = useState(false);
     const [auditoriaId, setAuditoriaId] = useState(null);
+    const [success, setSuccess] = useState(null);
+    const [dialogoConfirmacion, setDialogoConfirmacion] = useState(false);
+    const [auditoriaTerminada, setAuditoriaTerminada] = useState(false);
+    const [auditoriaFinalizada, setAuditoriaFinalizada] = useState(false);
+    const [mensaje, setMensaje] = useState({
+        texto: '',
+        tipo: '',
+        visible: false
+    });
+
+    // Obtener userData de la ventana si no se proporciona como prop
+    const userDataFinal = userData || window.userData;
+    // Obtener onCancel de la ventana si no se proporciona como prop
+    const onCancelFinal = onCancel || window.onCancel;
 
     // Inicializar respuestas para cada categoría
     useEffect(() => {
@@ -81,62 +99,121 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
     // Cargar respuestas guardadas de la auditoría actual
     useEffect(() => {
+        if (!categorias || categorias.length === 0) {
+            console.log('Esperando a que las categorías estén listas antes de cargar/crear auditoría...');
+            return;
+        }
         const cargarRespuestasAuditoria = async () => {
-            if (!userData || !userData.$id || !categorias.length) return;
-
+            if (!userDataFinal || !userDataFinal.$id) {
+                console.log('No hay datos de usuario disponibles');
+                return;
+            }
+            console.log('Disparando efecto de cargar/crear auditoría con categorías:', categorias);
             try {
-                // Primero intentamos obtener la auditoría en progreso del usuario
-                const response = await axios.get(`${API_URL}/api/auditoria/en-progreso/${userData.$id}`);
+                // Obtener la auditoría en progreso del usuario
+                console.log('Buscando auditoría en progreso para usuario:', userDataFinal.$id);
+                const response = await axiosInstance.get(`/api/auditoria/en-progreso/${userDataFinal.$id}`);
+                console.log('Respuesta al buscar auditoría:', response.data);
                 
-                if (response.data && response.data._id) {
-                    setAuditoriaId(response.data._id);
-                    if (response.data.respuestas) {
-                        // Asegurarnos de que todas las categorías tengan una estructura válida
-                        const respuestasActualizadas = { ...response.data.respuestas };
-                        categorias.forEach(categoria => {
-                            if (!respuestasActualizadas[categoria]) {
-                                respuestasActualizadas[categoria] = {
-                                    cantidad: 0,
-                                    detalles: []
-                                };
-                            }
-                        });
-                        setRespuestas(respuestasActualizadas);
-                        
-                        // Marcar SOLO las categorías que tienen datos guardados
-                        const nuevoGuardadoCategoria = {};
-                        Object.entries(respuestasActualizadas).forEach(([categoria, datos]) => {
-                            if (datos.cantidad > 0) {
-                                nuevoGuardadoCategoria[categoria] = {
-                                    guardado: true,
-                                    timestamp: response.data.ultimaModificacion || new Date().toISOString()
-                                };
-                            }
-                        });
-                        setGuardadoCategoria(nuevoGuardadoCategoria);
-                    }
+                if (!response.data || !response.data._id) {
+                    throw { response: { status: 404 } };
+                }
+                setAuditoriaId(response.data._id);
+                if (response.data.finalizada) {
+                    setAuditoriaTerminada(true);
+                    setAuditoriaFinalizada(response.data.auditoriaFinalizada || false);
+                }
+                if (response.data.respuestas) {
+                    const respuestasActualizadas = { ...response.data.respuestas };
+                    categorias.forEach(categoria => {
+                        if (!respuestasActualizadas[categoria]) {
+                            respuestasActualizadas[categoria] = {
+                                cantidad: 0,
+                                detalles: []
+                            };
+                        }
+                    });
+                    setRespuestas(respuestasActualizadas);
+                    const nuevoGuardadoCategoria = {};
+                    Object.entries(respuestasActualizadas).forEach(([categoria, datos]) => {
+                        if (datos.cantidad > 0) {
+                            nuevoGuardadoCategoria[categoria] = {
+                                guardado: true,
+                                timestamp: response.data.ultimaModificacion || new Date().toISOString()
+                            };
+                        }
+                    });
+                    setGuardadoCategoria(nuevoGuardadoCategoria);
                 }
                 setBorradoresCargados(true);
             } catch (error) {
-                console.error('Error al cargar respuestas guardadas:', error);
+                console.log('Entrando al catch de cargarRespuestasAuditoria. Error:', error);
+                
+                // Crear nueva auditoría si no existe una en progreso
+                try {
+                    const nuevaAuditoria = {
+                        respuestas: {},
+                        cliente: {
+                            id: userDataFinal.$id,
+                            nombre: userDataFinal.name || 'Usuario'
+                        },
+                        estado: 'en_progreso',
+                        fechaCreacion: new Date().toISOString(),
+                        ultimaModificacion: new Date().toISOString(),
+                        finalizada: false,
+                        auditoriaFinalizada: false,
+                        procesadoIA: false
+                    };
+                    console.log('Creando nueva auditoría:', nuevaAuditoria);
+                    const createResponse = await axiosInstance.post('/api/auditoria/en-progreso', nuevaAuditoria, {
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    console.log('Respuesta al crear auditoría:', createResponse.data);
+                    
+                    if (createResponse.data && createResponse.data._id) {
+                        setAuditoriaId(createResponse.data._id);
+                        const respuestasIniciales = {};
+                        categorias.forEach(categoria => {
+                            respuestasIniciales[categoria] = {
+                                cantidad: 0,
+                                detalles: []
+                            };
+                        });
+                        setRespuestas(respuestasIniciales);
+                        setBorradoresCargados(true);
+                        setError(null);
+                        console.log('Auditoría creada y estados actualizados correctamente');
+                    } else {
+                        console.error('La respuesta no contiene ID de auditoría:', createResponse.data);
+                        setError('Error al iniciar la auditoría. Por favor, intente nuevamente.');
+                    }
+                } catch (createError) {
+                    console.error('Error al crear nueva auditoría:', createError);
+                    if (createError.response) {
+                        console.error('Datos de error del servidor:', createError.response.data);
+                    }
+                    setError('Error al iniciar la auditoría. Por favor, intente nuevamente.');
+                }
             }
         };
-
         cargarRespuestasAuditoria();
-    }, [userData, categorias]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userDataFinal, categorias]);
 
     // Verificar datos del usuario al inicio
     useEffect(() => {
-        if (!userData) {
+        if (!userDataFinal) {
             setError('No hay datos de usuario disponibles');
             setLoading(false);
             return;
         }
 
-        console.log('Datos del usuario recibidos:', userData);
-        console.log('ID del usuario:', userData.$id);
-        console.log('Estructura completa de userData:', JSON.stringify(userData, null, 2));
-    }, [userData]);
+        console.log('Datos del usuario recibidos:', userDataFinal);
+        console.log('ID del usuario:', userDataFinal.$id);
+        console.log('Estructura completa de userData:', JSON.stringify(userDataFinal, null, 2));
+    }, [userDataFinal]);
 
     // Función para verificar la conexión al backend
     const verificarConexionBackend = async () => {
@@ -215,29 +292,51 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
         fetchActivos();
     }, []);
 
-    const handleCantidadChange = (categoria, cantidad) => {
-        const nuevaCantidad = parseInt(cantidad) || 0;
+    // Función para obtener nombres únicos de activos por categoría
+    const getNombresActivos = (categoria) => {
+        const nombresUnicos = [...new Set(
+            activos
+                .filter(activo => activo.Categoría === categoria)
+                .map(activo => activo.Nombre)
+        )];
+        return nombresUnicos;
+    };
+
+    // Función para obtener proveedores únicos de activos por categoría
+    const getProveedoresActivos = (categoria) => {
+        const proveedoresUnicos = [...new Set(
+            activos
+                .filter(activo => activo.Categoría === categoria)
+                .map(activo => activo.Proveedor)
+        )];
+        return proveedoresUnicos;
+    };
+
+    const handleCantidadChange = (categoria, nuevaCantidad) => {
         setRespuestas(prev => {
             const detallesPrevios = prev[categoria]?.detalles || [];
-            let nuevosDetalles = [];
+            let nuevosDetalles;
+
             if (nuevaCantidad > detallesPrevios.length) {
-                // Mantener los existentes y añadir nuevos vacíos
+                // Añadir nuevos elementos si se aumenta la cantidad
                 nuevosDetalles = [
                     ...detallesPrevios,
                     ...Array(nuevaCantidad - detallesPrevios.length).fill({
                         nombre: '',
                         proveedor: '',
-                        version: '',
-                        ubicacion: ''
+                        criticidad: 3,
+                        securizacion: ''
                     })
                 ];
             } else {
-                // Reducir la lista manteniendo los primeros elementos
+                // Recortar si se reduce la cantidad
                 nuevosDetalles = detallesPrevios.slice(0, nuevaCantidad);
             }
+
             return {
                 ...prev,
                 [categoria]: {
+                    ...prev[categoria],
                     cantidad: nuevaCantidad,
                     detalles: nuevosDetalles
                 }
@@ -264,84 +363,162 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
     const handleGuardarCategoria = async (categoria) => {
         try {
+            if (!userDataFinal || !userDataFinal.$id) {
+                throw new Error('No hay datos de usuario disponibles');
+            }
+
+            // Verificar que tenemos un ID de auditoría
+            if (!auditoriaId) {
+                throw new Error('No hay una auditoría activa');
+            }
+
+            // Preparar los datos a guardar
             const datosCategoria = {
-                categoria,
-                respuestas: respuestas[categoria],
-                userId: userData.$id
+                respuestas: {
+                    ...respuestas,
+                    [categoria]: respuestas[categoria]
+                },
+                cliente: {
+                    id: userDataFinal.$id,
+                    nombre: userDataFinal.name || 'Usuario'
+                },
+                ultimaModificacion: new Date().toISOString()
             };
 
-            if (auditoriaId) {
-                // Actualizar auditoría existente
-                await axios.put(`${API_URL}/api/auditoria/${auditoriaId}/categoria`, datosCategoria);
-            } else {
-                // Crear nueva auditoría
-                const response = await axios.post(`${API_URL}/api/auditoria`, datosCategoria);
-                setAuditoriaId(response.data._id);
-            }
-
-            setGuardadoCategoria(prev => ({
-                ...prev,
-                [categoria]: {
-                    guardado: true,
-                    timestamp: new Date().toISOString()
+            // Actualizar la auditoría en la base de datos
+            const response = await axios.put(
+                `${API_URL}/api/auditoria/${auditoriaId}`,
+                datosCategoria,
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 }
-            }));
+            );
+
+            if (response.data) {
+                // Actualizar el estado local
+                setGuardadoCategoria(prev => ({
+                    ...prev,
+                    [categoria]: {
+                        guardado: true,
+                        timestamp: new Date().toISOString()
+                    }
+                }));
+
+                setMensaje({
+                    texto: `Categoría ${categoria} guardada correctamente`,
+                    tipo: 'success',
+                    visible: true
+                });
+
+                // Ocultar el mensaje después de 3 segundos
+                setTimeout(() => {
+                    setMensaje(prev => ({ ...prev, visible: false }));
+                }, 3000);
+            }
         } catch (error) {
-            console.error('Error al guardar categoría:', error);
-            setError('Error al guardar los datos. Por favor, intente nuevamente.');
+            console.error('Error al guardar la categoría:', error);
+            setMensaje({
+                texto: error.message || 'Error al guardar la categoría',
+                tipo: 'error',
+                visible: true
+            });
         }
     };
 
-    const handleSubmit = async () => {
+    const handleConfirmarFinalizacion = async () => {
         try {
-            setLoading(true);
-            setError(null);
-
-            // Verificar que todas las categorías tengan datos
-            const categoriasSinDatos = categorias.filter(categoria => {
-                const datosCategoria = respuestas[categoria];
-                return !datosCategoria || datosCategoria.cantidad === 0;
-            });
-
-            if (categoriasSinDatos.length > 0) {
-                setError(`Por favor, complete los datos para las siguientes categorías: ${categoriasSinDatos.join(', ')}`);
-                setLoading(false);
-                return;
+            if (!userDataFinal || !userDataFinal.$id) {
+                throw new Error('No hay datos de usuario disponibles');
             }
 
-            // Enviar datos al backend
-            const response = await axios.post(`${API_URL}/api/auditoria/procesar`, {
-                userId: userData.$id,
-                respuestas
-            });
+            if (!auditoriaId) {
+                throw new Error('No hay una auditoría activa');
+            }
 
-            if (response.data.success) {
-                setProcesadoIA(true);
-                setMostrarConfirmacion(true);
-            } else {
-                setError('Error al procesar la auditoría. Por favor, intente nuevamente.');
+            // Preparar los datos finales
+            const datosFinales = {
+                respuestas: respuestas,
+                cliente: {
+                    id: userDataFinal.$id,
+                    nombre: userDataFinal.name || 'Usuario'
+                },
+                estado: 'finalizada',
+                fechaFinalizacion: new Date().toISOString(),
+                ultimaModificacion: new Date().toISOString(),
+                finalizada: true,
+                auditoriaFinalizada: true,
+                procesadoIA: false,
+                metadata: {
+                    auditoriaFinalizada: true,
+                    fechaFinalizacion: new Date().toISOString()
+                }
+            };
+
+            console.log('Enviando datos para finalizar auditoría:', datosFinales);
+
+            // Actualizar la auditoría en la base de datos
+            const response = await axios.put(
+                `${API_URL}/api/auditoria/${auditoriaId}`,
+                datosFinales,
+                {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data) {
+                // Verificar que los datos se guardaron correctamente
+                console.log('Respuesta del servidor:', response.data);
+                
+                setAuditoriaTerminada(true);
+                setAuditoriaFinalizada(true);
+                // Añadir campo oculto al formulario
+                const finalizadaInput = document.createElement('input');
+                finalizadaInput.type = 'hidden';
+                finalizadaInput.name = 'auditoria_finalizada';
+                finalizadaInput.value = 'true';
+                document.querySelector('form')?.appendChild(finalizadaInput);
+
+                setMensaje({
+                    texto: 'Auditoría finalizada correctamente',
+                    tipo: 'success',
+                    visible: true
+                });
+
+                // Ocultar el mensaje después de 3 segundos
+                setTimeout(() => {
+                    setMensaje(prev => ({ ...prev, visible: false }));
+                }, 3000);
+
+                // Cerrar el diálogo de confirmación
+                setDialogoConfirmacion(false);
+
+                // Redirigir a la página de resultados después de un breve delay
+                setTimeout(() => {
+                    navigate('/home');
+                }, 2000);
             }
         } catch (error) {
-            console.error('Error al enviar auditoría:', error);
-            setError('Error al procesar la auditoría. Por favor, intente nuevamente.');
-        } finally {
-            setLoading(false);
+            console.error('Error al finalizar la auditoría:', error);
+            setMensaje({
+                texto: error.message || 'Error al finalizar la auditoría',
+                tipo: 'error',
+                visible: true
+            });
+            setDialogoConfirmacion(false);
         }
     };
 
-    const handleTerminar = () => {
-        setMostrarConfirmacion(true);
-    };
-
-    const handleConfirmarFinalizacion = (confirmado) => {
-        if (confirmado) {
-            onCancel();
-        }
-        setMostrarConfirmacion(false);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setDialogoConfirmacion(true);
     };
 
     const handleCancel = () => {
-        setMostrarConfirmacion(true);
+        navigate('/home');
     };
 
     const handleEliminarActivo = (categoria, index) => {
@@ -361,17 +538,27 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
     if (loading) {
         return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography>Cargando activos...</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <CircularProgress />
             </Box>
         );
     }
 
     if (error) {
         return (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="error">{error}</Typography>
-                <Button onClick={() => window.location.reload()} sx={{ mt: 2 }}>
+            <Box sx={{ p: 3 }}>
+                <Typography color="error" gutterBottom>
+                    {error}
+                </Typography>
+                <Button 
+                    variant="contained" 
+                    onClick={() => {
+                        setError(null);
+                        setLoading(true);
+                        fetchActivos();
+                    }}
+                    sx={{ mt: 2 }}
+                >
                     Reintentar
                 </Button>
             </Box>
@@ -379,124 +566,418 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     }
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h5" gutterBottom>
-                Auditoría de Activos
-            </Typography>
-            {categorias.map(categoria => (
-                <Paper key={categoria} sx={{ p: 2, mb: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                        {categoria}
-                    </Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel>Cantidad de Activos</InputLabel>
-                                <Select
-                                    value={respuestas[categoria]?.cantidad || 0}
-                                    onChange={(e) => handleCantidadChange(categoria, e.target.value)}
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+            <Box sx={{ 
+                position: 'fixed', 
+                top: '20px', 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 1000,
+                width: 'auto',
+                minWidth: '300px'
+            }}>
+                <Snackbar
+                    open={mensaje.visible}
+                    autoHideDuration={3000}
+                    onClose={() => setMensaje(prev => ({ ...prev, visible: false }))}
+                    anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+                >
+                    <Alert 
+                        severity={mensaje.tipo} 
+                        sx={{ 
+                            width: '100%',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            '& .MuiAlert-message': {
+                                fontSize: '1rem',
+                                fontWeight: 'medium'
+                            }
+                        }}
+                    >
+                        {mensaje.texto}
+                    </Alert>
+                </Snackbar>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <Typography 
+                    variant="h4" 
+                    component="h1" 
+                    sx={{ 
+                        color: '#1976d2',
+                        textAlign: 'center',
+                        borderBottom: '2px solid #1976d2',
+                        pb: 1,
+                        fontWeight: 'bold'
+                    }}
+                >
+                    Auditoría de activos
+                </Typography>
+            </Box>
+            <form onSubmit={handleSubmit}>
+                {categorias.map((categoria) => (
+                    <Paper 
+                        key={categoria} 
+                        elevation={3} 
+                        sx={{ 
+                            p: 3, 
+                            mb: 3, 
+                            backgroundColor: '#ffffff',
+                            borderRadius: '8px'
+                        }}
+                    >
+                        <Box sx={{ mb: 4 }}>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                justifyContent: 'flex-end', 
+                                alignItems: 'center',
+                                mb: 2
+                            }}>
+                                <Typography 
+                                    variant="h4" 
+                                    sx={{ 
+                                        color: '#1976d2',
+                                        textAlign: 'left',
+                                        borderBottom: '2px solid #1976d2',
+                                        pb: 1,
+                                        fontWeight: 'bold',
+                                        flex: 1
+                                    }}
                                 >
-                                    {[...Array(11)].map((_, i) => (
-                                        <MenuItem key={i} value={i}>{i}</MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        {respuestas[categoria]?.detalles.map((detalle, index) => (
-                            <Grid item xs={12} key={index}>
-                                <Paper sx={{ p: 2 }}>
+                                    {categoria}
+                                </Typography>
+                                {!auditoriaTerminada && (
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => handleGuardarCategoria(categoria)}
+                                        sx={{ 
+                                            backgroundColor: '#FFB6A3',
+                                            color: '#666',
+                                            padding: '4px 6px',
+                                            minWidth: 'auto',
+                                            width: 'fit-content',
+                                            '&:hover': {
+                                                backgroundColor: '#FFA38C'
+                                            }
+                                        }}
+                                    >
+                                        Guardar Categoría
+                                    </Button>
+                                )}
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+                                <Typography 
+                                    variant="subtitle1" 
+                                    sx={{ 
+                                        color: '#666',
+                                        textAlign: 'left',
+                                        fontStyle: 'italic'
+                                    }}
+                                >
+                                    ¿Cuántos activos {categoria.toLowerCase()} tienes?
+                                </Typography>
+                                <TextField
+                                    type="number"
+                                    value={respuestas[categoria]?.cantidad || 0}
+                                    onChange={(e) => handleCantidadChange(categoria, parseInt(e.target.value) || 0)}
+                                    disabled={auditoriaTerminada}
+                                    InputProps={{ 
+                                        inputProps: { 
+                                            min: 0,
+                                            style: { 
+                                                fontSize: '1.1rem',
+                                                fontWeight: 'bold',
+                                                textAlign: 'center',
+                                                padding: '4px 8px',
+                                                width: '100%',
+                                                color: '#666'
+                                            }
+                                        },
+                                        sx: { 
+                                            backgroundColor: '#ffffff',
+                                            borderRadius: '4px',
+                                            '&:hover': {
+                                                backgroundColor: '#f5f5f5'
+                                            }
+                                        }
+                                    }}
+                                    sx={{ 
+                                        width: '80px',
+                                        '& .MuiOutlinedInput-root': {
+                                            '& fieldset': {
+                                                borderColor: '#666',
+                                            },
+                                            '&:hover fieldset': {
+                                                borderColor: '#666',
+                                            },
+                                            '&.Mui-focused fieldset': {
+                                                borderColor: '#666',
+                                            }
+                                        }
+                                    }}
+                                />
+                            </Box>
+                            {respuestas[categoria]?.detalles.map((detalle, detalleIndex) => (
+                                <Box 
+                                    key={detalleIndex} 
+                                    sx={{ 
+                                        mb: 2, 
+                                        p: 2, 
+                                        border: '1px solid #e0e0e0', 
+                                        borderRadius: '4px',
+                                        backgroundColor: '#fafafa',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <Box sx={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'space-between', 
+                                        alignItems: 'center',
+                                        mb: 2
+                                    }}>
+                                        <Typography 
+                                            variant="subtitle1" 
+                                            sx={{ 
+                                                color: '#1976d2',
+                                                textAlign: 'left',
+                                                borderBottom: '2px solid #1976d2',
+                                                pb: 1,
+                                                fontWeight: 'bold'
+                                            }}
+                                        >
+                                            Activo {categoria} {detalleIndex + 1}
+                                        </Typography>
+                                        {!auditoriaTerminada && (
+                                            <IconButton
+                                                onClick={() => handleEliminarActivo(categoria, detalleIndex)}
+                                                color="error"
+                                                size="small"
+                                                sx={{ 
+                                                    border: '1px solid #d32f2f',
+                                                    color: '#d32f2f',
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    minWidth: '28px',
+                                                    padding: '4px',
+                                                    '&:hover': {
+                                                        borderColor: '#b71c1c',
+                                                        backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                                    }
+                                                }}
+                                            >
+                                                <DeleteIcon fontSize="small" />
+                                            </IconButton>
+                                        )}
+                                    </Box>
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12} sm={6}>
+                                        <Grid item xs={12}>
+                                            <Typography 
+                                                variant="subtitle1" 
+                                                sx={{ 
+                                                    color: '#666',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #666',
+                                                    pb: 0.5,
+                                                    mb: 1
+                                                }}
+                                            >
+                                                Nombre
+                                            </Typography>
                                             <FormControl fullWidth>
-                                                <InputLabel>Nombre del Activo</InputLabel>
                                                 <Select
-                                                    value={detalle.nombre}
-                                                    onChange={(e) => handleDetalleChange(categoria, index, 'nombre', e.target.value)}
+                                                    value={detalle.nombre || ''}
+                                                    onChange={(e) => handleDetalleChange(categoria, detalleIndex, 'nombre', e.target.value)}
+                                                    disabled={auditoriaTerminada}
+                                                    sx={{ backgroundColor: '#ffffff' }}
                                                 >
-                                                    {modelos[categoria]?.nombres.map((modelo, i) => (
-                                                        <MenuItem key={i} value={modelo.nombre}>
-                                                            {modelo.nombre}
+                                                    {getNombresActivos(categoria).map((nombre) => (
+                                                        <MenuItem key={nombre} value={nombre}>
+                                                            {nombre}
                                                         </MenuItem>
                                                     ))}
                                                 </Select>
                                             </FormControl>
                                         </Grid>
-                                        <Grid item xs={12} sm={6}>
+                                        <Grid item xs={12}>
+                                            <Typography 
+                                                variant="subtitle1" 
+                                                sx={{ 
+                                                    color: '#666',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #666',
+                                                    pb: 0.5,
+                                                    mb: 1
+                                                }}
+                                            >
+                                                Proveedor
+                                            </Typography>
                                             <FormControl fullWidth>
-                                                <InputLabel>Proveedor</InputLabel>
                                                 <Select
-                                                    value={detalle.proveedor}
-                                                    onChange={(e) => handleDetalleChange(categoria, index, 'proveedor', e.target.value)}
+                                                    value={detalle.proveedor || ''}
+                                                    onChange={(e) => handleDetalleChange(categoria, detalleIndex, 'proveedor', e.target.value)}
+                                                    disabled={auditoriaTerminada}
+                                                    sx={{ backgroundColor: '#ffffff' }}
                                                 >
-                                                    {modelos[categoria]?.proveedores.map((proveedor, i) => (
-                                                        <MenuItem key={i} value={proveedor}>
+                                                    {getProveedoresActivos(categoria).map((proveedor) => (
+                                                        <MenuItem key={proveedor} value={proveedor}>
                                                             {proveedor}
                                                         </MenuItem>
                                                     ))}
                                                 </Select>
                                             </FormControl>
                                         </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Versión"
-                                                value={detalle.version}
-                                                onChange={(e) => handleDetalleChange(categoria, index, 'version', e.target.value)}
-                                            />
-                                        </Grid>
-                                        <Grid item xs={12} sm={6}>
-                                            <TextField
-                                                fullWidth
-                                                label="Ubicación"
-                                                value={detalle.ubicacion}
-                                                onChange={(e) => handleDetalleChange(categoria, index, 'ubicacion', e.target.value)}
+                                        <Grid item xs={12}>
+                                            <Typography 
+                                                variant="subtitle1" 
+                                                sx={{ 
+                                                    color: '#666',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #666',
+                                                    pb: 0.5,
+                                                    mb: 1
+                                                }}
+                                            >
+                                                Criticidad
+                                            </Typography>
+                                            <Slider
+                                                value={detalle.criticidad || 3}
+                                                onChange={(_, value) => handleDetalleChange(categoria, detalleIndex, 'criticidad', value)}
+                                                min={1}
+                                                max={5}
+                                                step={1}
+                                                marks={[
+                                                    { value: 1, label: '1' },
+                                                    { value: 2, label: '2' },
+                                                    { value: 3, label: '3' },
+                                                    { value: 4, label: '4' },
+                                                    { value: 5, label: '5' }
+                                                ]}
+                                                disabled={auditoriaTerminada}
+                                                sx={{
+                                                    color: '#666',
+                                                    width: '80%',
+                                                    mx: 'auto',
+                                                    '& .MuiSlider-mark': {
+                                                        backgroundColor: '#bfbfbf'
+                                                    },
+                                                    '& .MuiSlider-markLabel': {
+                                                        color: '#666',
+                                                        fontSize: '0.875rem'
+                                                    }
+                                                }}
                                             />
                                         </Grid>
                                         <Grid item xs={12}>
-                                            <Button
-                                                variant="outlined"
-                                                color="error"
-                                                startIcon={<DeleteIcon />}
-                                                onClick={() => handleEliminarActivo(categoria, index)}
+                                            <Typography 
+                                                variant="subtitle1" 
+                                                sx={{ 
+                                                    color: '#666',
+                                                    textAlign: 'left',
+                                                    borderBottom: '1px solid #666',
+                                                    pb: 0.5,
+                                                    mb: 1
+                                                }}
                                             >
-                                                Eliminar Activo
-                                            </Button>
+                                                Securización del activo
+                                            </Typography>
+                                            <TextField
+                                                value={detalle.securizacion || ''}
+                                                onChange={(e) => handleDetalleChange(categoria, detalleIndex, 'securizacion', e.target.value)}
+                                                fullWidth
+                                                disabled={auditoriaTerminada}
+                                                multiline
+                                                rows={4}
+                                                sx={{ 
+                                                    backgroundColor: '#ffffff',
+                                                    '& .MuiOutlinedInput-root': {
+                                                        '& fieldset': {
+                                                            borderColor: '#666',
+                                                        },
+                                                        '&:hover fieldset': {
+                                                            borderColor: '#666',
+                                                        },
+                                                        '&.Mui-focused fieldset': {
+                                                            borderColor: '#666',
+                                                        }
+                                                    }
+                                                }}
+                                            />
                                         </Grid>
                                     </Grid>
-                                </Paper>
-                            </Grid>
-                        ))}
-                        <Grid item xs={12}>
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={() => handleGuardarCategoria(categoria)}
-                                disabled={guardadoCategoria[categoria]?.guardado}
-                            >
-                                {guardadoCategoria[categoria]?.guardado ? 'Guardado' : 'Guardar Categoría'}
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Paper>
-            ))}
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-                <Button
-                    variant="outlined"
-                    color="secondary"
-                    onClick={handleCancel}
-                >
-                    Cancelar
-                </Button>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                >
-                    Finalizar Auditoría
-                </Button>
-            </Box>
-        </Box>
+                                </Box>
+                            ))}
+                        </Box>
+                    </Paper>
+                ))}
+                {!auditoriaTerminada && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 4 }}>
+                        <Button
+                            variant="outlined"
+                            color="error"
+                            onClick={handleCancel}
+                            size="large"
+                            sx={{ 
+                                borderColor: '#d32f2f',
+                                color: '#d32f2f',
+                                '&:hover': {
+                                    borderColor: '#b71c1c',
+                                    backgroundColor: 'rgba(211, 47, 47, 0.04)'
+                                }
+                            }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            color="primary"
+                            size="large"
+                            sx={{ 
+                                backgroundColor: '#1976d2',
+                                '&:hover': {
+                                    backgroundColor: '#1565c0'
+                                }
+                            }}
+                        >
+                            Finalizar Auditoría
+                        </Button>
+                    </Box>
+                )}
+            </form>
+            <Dialog
+                open={dialogoConfirmacion}
+                onClose={() => setDialogoConfirmacion(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle sx={{ 
+                    backgroundColor: '#1976d2', 
+                    color: 'white',
+                    fontWeight: 'bold'
+                }}>
+                    Confirmar Finalización
+                </DialogTitle>
+                <DialogContent sx={{ mt: 2 }}>
+                    <Typography>
+                        ¿Estás seguro de que deseas finalizar la auditoría? Esta acción no se puede deshacer.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button 
+                        onClick={() => setDialogoConfirmacion(false)} 
+                        color="error"
+                        sx={{ mr: 1 }}
+                    >
+                        Cancelar
+                    </Button>
+                    <Button 
+                        onClick={() => handleConfirmarFinalizacion()} 
+                        color="primary" 
+                        variant="contained"
+                    >
+                        Confirmar
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Container>
     );
 };
 
