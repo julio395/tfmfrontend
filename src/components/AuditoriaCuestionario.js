@@ -9,7 +9,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 30000, // Aumentamos el timeout a 30 segundos
+    timeout: 30000,
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -22,7 +22,13 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
     response => response,
     error => {
-        console.error('Error en la petición:', error);
+        console.error('Error en la petición:', {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            code: error.code,
+            stack: error.stack
+        });
         
         if (error.code === 'ECONNABORTED') {
             return Promise.reject(new Error('La petición ha excedido el tiempo de espera. Por favor, intente nuevamente.'));
@@ -31,8 +37,6 @@ axiosInstance.interceptors.response.use(
             return Promise.reject(new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.'));
         }
         if (error.response) {
-            // El servidor respondió con un código de estado fuera del rango 2xx
-            console.error('Error de respuesta:', error.response.data);
             return Promise.reject(new Error(error.response.data.error || 'Error en el servidor'));
         }
         return Promise.reject(error);
@@ -133,75 +137,47 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 console.log('Iniciando verificación de conexión con el backend...');
                 
-                // Primero verificamos que el backend esté respondiendo
-                try {
-                    console.log('Verificando disponibilidad del backend...');
-                    const healthCheck = await axios.get(`${API_URL}/api/health`, { 
-                        timeout: 5000,
-                        validateStatus: function (status) {
-                            return true; // Aceptamos cualquier status para ver el mensaje de error
-                        }
-                    });
-                    console.log('Estado del backend:', healthCheck.data);
-                    
-                    if (healthCheck.data.status === 'error') {
-                        if (healthCheck.data.error?.includes('listCollections')) {
-                            throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
-                        } else {
-                            throw new Error(healthCheck.data.error || 'Error interno del servidor');
-                        }
+                // Verificar el estado del backend
+                const healthCheck = await axios.get(`${API_URL}/api/health`, { 
+                    timeout: 10000,
+                    validateStatus: function (status) {
+                        return true;
                     }
-                } catch (healthError) {
-                    console.error('Error detallado al verificar el backend:', {
-                        message: healthError.message,
-                        response: healthError.response?.data,
-                        status: healthError.response?.status,
-                        code: healthError.code,
-                        stack: healthError.stack
-                    });
-                    
-                    if (healthError.response?.data?.error?.includes('listCollections')) {
-                        throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
-                    } else if (healthError.response?.status === 500) {
-                        throw new Error(healthError.response?.data?.error || 'Error interno del servidor');
-                    } else {
-                        throw new Error('El servidor no está respondiendo. Por favor, contacte al administrador.');
+                });
+                
+                console.log('Estado del backend:', healthCheck.data);
+                
+                if (healthCheck.status !== 200 || healthCheck.data.status === 'error') {
+                    throw new Error(healthCheck.data.error || 'Error al verificar el estado del servidor');
+                }
+
+                // Verificar la conexión a MongoDB
+                const mongoStatus = await axios.get(`${API_URL}/api/mongodb-status`, {
+                    timeout: 10000,
+                    validateStatus: function (status) {
+                        return true;
                     }
+                });
+
+                if (mongoStatus.status !== 200 || mongoStatus.data.status !== 'connected') {
+                    throw new Error('Error de conexión con la base de datos');
                 }
 
                 // Obtener los activos
                 console.log('Intentando obtener activos...');
                 const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
-                    timeout: 10000,
-                    validateStatus: function (status) {
-                        return true; // Aceptamos cualquier status para ver el mensaje de error
-                    }
+                    timeout: 15000
                 });
-                console.log('Respuesta de activos recibida:', activosResponse.data);
-                
-                if (activosResponse.status === 500) {
-                    if (activosResponse.data?.error?.includes('listCollections')) {
-                        throw new Error('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
-                    } else {
-                        throw new Error(activosResponse.data?.error || 'Error interno del servidor al obtener los activos.');
-                    }
-                }
-                
+
                 if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
-                    console.error('Formato de respuesta inválido:', activosResponse.data);
-                    setError('Formato de datos inválido recibido del servidor');
-                    setLoading(false);
-                    return;
+                    throw new Error('Formato de datos inválido recibido del servidor');
                 }
 
                 // Filtrar activos que tengan categoría
                 const activosFiltrados = activosResponse.data.filter(activo => activo && activo.Categoría);
                 
                 if (activosFiltrados.length === 0) {
-                    console.error('No se encontraron activos con categoría');
-                    setError('No se encontraron activos con categoría en la base de datos');
-                    setLoading(false);
-                    return;
+                    throw new Error('No se encontraron activos con categoría en la base de datos');
                 }
 
                 console.log('Activos obtenidos:', activosFiltrados.length);
@@ -209,17 +185,14 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                 
                 // Extraer categorías únicas
                 const categoriasUnicas = [...new Set(activosFiltrados.map(activo => activo.Categoría))];
-                console.log('Categorías encontradas:', categoriasUnicas);
                 
                 if (categoriasUnicas.length === 0) {
-                    setError('No se encontraron categorías en los activos');
-                    setLoading(false);
-                    return;
+                    throw new Error('No se encontraron categorías en los activos');
                 }
 
                 setCategorias(categoriasUnicas);
                 
-                // Inicializar respuestas para cada categoría solo si no hay borradores cargados
+                // Inicializar respuestas
                 if (!borradoresCargados) {
                     const respuestasIniciales = {};
                     categoriasUnicas.forEach(categoria => {
@@ -241,7 +214,6 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                             proveedor: activo.Proveedor || ''
                         }));
 
-                    // Eliminar duplicados de nombres y mantener sus proveedores correspondientes
                     const nombresUnicos = [...new Set(activosCategoria.map(activo => activo.nombre))]
                         .filter(nombre => nombre)
                         .map(nombre => {
@@ -252,7 +224,6 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                             };
                         });
 
-                    // Obtener proveedores únicos de los activos filtrados
                     const proveedoresUnicos = [...new Set(activosCategoria
                         .filter(activo => activo.proveedor)
                         .map(activo => activo.proveedor))];
@@ -262,41 +233,12 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                         proveedores: proveedoresUnicos
                     };
                 });
-                setModelos(modelosPorCategoria);
                 
+                setModelos(modelosPorCategoria);
                 setLoading(false);
             } catch (error) {
-                console.error('Error detallado al cargar activos:', {
-                    message: error.message,
-                    response: error.response?.data,
-                    status: error.response?.status,
-                    code: error.code,
-                    stack: error.stack
-                });
-                
-                if (error.message.includes('MongoDB está desconectada')) {
-                    setError(error.message);
-                } else if (error.message.includes('Error interno del servidor')) {
-                    setError(error.message);
-                } else if (error.message.includes('Timeout')) {
-                    setError('El servidor está tardando demasiado en responder. Por favor, intente nuevamente más tarde.');
-                } else if (error.message.includes('no está respondiendo')) {
-                    setError('El servidor no está respondiendo. Por favor, contacte al administrador.');
-                } else if (error.response) {
-                    console.error('Respuesta del servidor:', error.response.data);
-                    console.error('Estado:', error.response.status);
-                    if (error.response.data.error && error.response.data.error.includes('listCollections')) {
-                        setError('Error de conexión con la base de datos. Por favor, contacte al administrador para verificar la conexión a MongoDB.');
-                    } else {
-                        setError(`Error del servidor: ${error.response.data.message || 'Error al cargar los activos'}`);
-                    }
-                } else if (error.request) {
-                    console.error('No se recibió respuesta del servidor');
-                    setError('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
-                } else {
-                    console.error('Error:', error.message);
-                    setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
-                }
+                console.error('Error al cargar activos:', error);
+                setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
                 setLoading(false);
             }
         };
