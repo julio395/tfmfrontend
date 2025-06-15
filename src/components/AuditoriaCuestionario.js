@@ -9,7 +9,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'https://backendtfm.julio.cooli
 const axiosInstance = axios.create({
     baseURL: API_URL,
     withCredentials: true,
-    timeout: 15000, // Aumentamos el timeout a 15 segundos
+    timeout: 30000, // Aumentamos el timeout a 30 segundos
     headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -22,13 +22,18 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.response.use(
     response => response,
     error => {
+        console.error('Error en la petición:', error);
+        
         if (error.code === 'ECONNABORTED') {
-            console.error('La petición ha excedido el tiempo de espera');
             return Promise.reject(new Error('La petición ha excedido el tiempo de espera. Por favor, intente nuevamente.'));
         }
         if (error.code === 'ERR_NETWORK') {
-            console.error('Error de red:', error);
             return Promise.reject(new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.'));
+        }
+        if (error.response) {
+            // El servidor respondió con un código de estado fuera del rango 2xx
+            console.error('Error de respuesta:', error.response.data);
+            return Promise.reject(new Error(error.response.data.error || 'Error en el servidor'));
         }
         return Promise.reject(error);
     }
