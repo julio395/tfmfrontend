@@ -37,6 +37,15 @@ axiosInstance.interceptors.response.use(
             return Promise.reject(new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.'));
         }
         if (error.response) {
+            if (error.response.status === 401) {
+                return Promise.reject(new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.'));
+            }
+            if (error.response.status === 403) {
+                return Promise.reject(new Error('No tienes permisos para realizar esta acción.'));
+            }
+            if (error.response.status === 503) {
+                return Promise.reject(new Error('El servidor está temporalmente no disponible. Por favor, intente más tarde.'));
+            }
             return Promise.reject(new Error(error.response.data.error || 'Error en el servidor'));
         }
         return Promise.reject(error);
