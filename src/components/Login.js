@@ -20,10 +20,10 @@ const Login = ({ setUser }) => {
             setUser(userData);
             
             // Redirigir según el rol
-            if (userData.role === 'admin') {
+            if (userData.role === 'user') {
+                navigate('/user');
+            } else if (userData.role === 'admin') {
                 navigate('/admin');
-            } else {
-                navigate('/home');
             }
         } catch (error) {
             console.error('Error en login:', error);

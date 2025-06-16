@@ -518,7 +518,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     };
 
     const handleCancel = () => {
-        navigate('/home');
+        navigate('/user');
     };
 
     const handleEliminarActivo = (categoria, index) => {

@@ -4,17 +4,17 @@
 }
 
 .admin-content {
-  padding: 20px;
+  padding: 15px;
 }
 
 .view-selector {
   display: flex;
-  gap: 10px;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
 .view-button {
-  padding: 8px 16px;
+  padding: 8px 20px;
   border: 1px solid #ddd;
   background-color: white;
   color: #333;
@@ -23,6 +23,8 @@
   transition: all 0.3s ease;
   font-size: 14px;
   font-weight: 500;
+  min-width: 120px;
+  text-align: center;
 }
 
 .view-button:hover {
@@ -38,16 +40,16 @@
 
 .users-view, .databases-view {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .users-header, .databases-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .collection-selector {
@@ -57,21 +59,21 @@
 }
 
 .collection-select {
-  padding: 8px;
+  padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
-  min-width: 200px;
+  font-size: 13px;
+  min-width: 180px;
 }
 
 .create-button {
   background-color: #7CB342;
   color: white;
-  padding: 12px 20px;
+  padding: 8px 16px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 13px;
   width: fit-content;
   white-space: nowrap;
 }
@@ -82,32 +84,38 @@
 
 .table-container {
   overflow-x: auto;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin: 0;
 }
 
 th, td {
-  padding: 12px;
+  padding: 6px 8px;
   text-align: left;
   border-bottom: 1px solid #ddd;
+  font-size: 13px;
 }
 
 th {
   background-color: #f5f5f5;
-  font-weight: bold;
+  font-weight: 500;
+  border-bottom: 2px solid #ddd;
 }
 
 .edit-button, .delete-button {
-  padding: 6px 12px;
+  padding: 4px 8px;
   margin: 0 4px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .edit-button {
@@ -143,14 +151,14 @@ th {
 
 .modal-content {
   background-color: white;
-  padding: 20px;
+  padding: 15px;
   border-radius: 8px;
-  width: 400px;
+  width: 350px;
   max-width: 90%;
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .form-group label {
@@ -161,10 +169,10 @@ th {
 
 .form-group input {
   width: 100%;
-  padding: 8px;
+  padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .modal-buttons {
@@ -175,11 +183,11 @@ th {
 }
 
 .modal-buttons button {
-  padding: 8px 16px;
+  padding: 6px 12px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .modal-buttons button:first-child {
@@ -225,16 +233,16 @@ th {
 }
 
 .pagination-button {
-  padding: 4px 8px;
+  padding: 3px 6px;
   border: 1px solid #ddd;
   background-color: white;
   color: #333;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 28px;
+  min-width: 24px;
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -531,38 +539,34 @@ th {
 
 .collections-list {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 15px;
 }
 
 .collection-button {
-  padding: 10px 20px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  background-color: #f8f9fa;
+  padding: 6px 12px;
+  margin: 4px;
+  border: 1px solid #ddd;
+  background-color: white;
+  color: #333;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: 14px;
-  font-weight: 500;
-  color: #495057;
-  min-width: 120px;
+  transition: all 0.3s ease;
+  font-size: 12px;
+  min-width: 100px;
   text-align: center;
 }
 
 .collection-button:hover {
-  background-color: #e9ecef;
-  border-color: #64B5F6;
-  color: #212529;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #f5f5f5;
+  border-color: #ccc;
 }
 
 .collection-button.active {
-  background-color: #64B5F6;
+  background-color: #4a90e2;
   color: white;
-  border-color: #64B5F6;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(100, 181, 246, 0.3);
+  border-color: #4a90e2;
 }
 
 .collection-content {
