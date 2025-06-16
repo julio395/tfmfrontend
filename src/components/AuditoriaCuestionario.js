@@ -222,21 +222,42 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
             console.log('Respuesta del backend:', response.data);
             return true;
         } catch (error) {
-            console.error('Error al verificar conexión con el backend:', error);
-            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
+            console.error('Error en la petición:', error);
+            if (error.response) {
+                console.error('Detalles del error:', {
+                    status: error.response.status,
+                    data: error.response.data
+                });
+            }
+            throw new Error('El servidor está temporalmente no disponible. Por favor, intente más tarde.');
         }
     };
 
     // Función para obtener los activos
     const fetchActivos = async () => {
         try {
-            console.log('Obteniendo activos...');
+            console.log('Iniciando verificación de conexión...');
+            await verificarConexionBackend();
+            console.log('Conexión verificada, obteniendo activos...');
+            
             const response = await axiosInstance.get('/api/tfm/Activos/all');
             console.log('Respuesta de activos:', response.data);
+            
+            if (!response.data || !Array.isArray(response.data)) {
+                console.error('Formato de respuesta inválido:', response.data);
+                throw new Error('Formato de respuesta inválido del servidor');
+            }
+            
             return response.data;
         } catch (error) {
             console.error('Error al cargar activos:', error);
-            throw new Error('Error de conexión con la base de datos');
+            if (error.response) {
+                console.error('Detalles del error:', {
+                    status: error.response.status,
+                    data: error.response.data
+                });
+            }
+            throw new Error('Error al cargar los activos. Por favor, intente más tarde.');
         }
     };
 
