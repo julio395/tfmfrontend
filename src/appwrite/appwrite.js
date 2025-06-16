@@ -15,8 +15,8 @@ const storage = new Storage(client);
 // Configuración de la API de MongoDB
 const isDevelopment = window.location.hostname === 'localhost';
 export const MONGODB_API_URL = isDevelopment 
-    ? 'http://localhost:3001/api/tfm'
-    : 'https://backendtfm.julio.coolify.hgccarlos.es/api/tfm';
+    ? 'http://localhost:5000'
+    : 'https://backendtfm.julio.coolify.hgccarlos.es';
 
 export const checkSession = async () => {
     try {

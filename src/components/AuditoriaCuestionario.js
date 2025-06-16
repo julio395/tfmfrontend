@@ -5,12 +5,11 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import SaveIcon from '@mui/icons-material/Save';
 import AddIcon from '@mui/icons-material/Add';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+import { MONGODB_API_URL } from '../appwrite/appwrite';
 
 // Configuración de Axios
 const axiosInstance = axios.create({
-    baseURL: API_URL,
+    baseURL: MONGODB_API_URL,
     withCredentials: true,
     timeout: 120000,
     headers: {
@@ -215,76 +214,29 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
         console.log('Estructura completa de userData:', JSON.stringify(userDataFinal, null, 2));
     }, [userDataFinal]);
 
-    // Función para verificar la conexión al backend
+    // Función para verificar la conexión con el backend
     const verificarConexionBackend = async () => {
         try {
-            console.log('Verificando conexión al backend...');
-            const response = await axiosInstance.get('/api/health', {
-                timeout: 30000,
-                validateStatus: function (status) {
-                    return status < 500; // Aceptar cualquier status menor a 500
-                }
-            });
-            
-            console.log('Respuesta del health check:', response.data);
-            
-            if (response.status !== 200) {
-                throw new Error(response.data.error || 'Error al verificar el estado del servidor');
-            }
-            
-            if (response.data.status === 'error') {
-                throw new Error(response.data.error || 'Error en el servidor');
-            }
-            
+            console.log('Verificando conexión con el backend...');
+            const response = await axiosInstance.get('/api/tfm/api/health');
+            console.log('Respuesta del backend:', response.data);
             return true;
         } catch (error) {
             console.error('Error al verificar conexión con el backend:', error);
-            throw new Error('Error de conexión con la base de datos');
+            throw new Error('No se pudo conectar con el servidor. Por favor, verifica tu conexión.');
         }
     };
 
-    // Modificar la función fetchActivos para incluir verificación de conexión
+    // Función para obtener los activos
     const fetchActivos = async () => {
         try {
-            setLoading(true);
-            setError(null);
-            
-            // Verificar conexión al backend primero
-            await verificarConexionBackend();
-            
-            // Obtener los activos
-            console.log('Intentando obtener activos...');
-            const activosResponse = await axiosInstance.get('/api/tfm/Activos/all', { 
-                timeout: 120000
-            });
-
-            if (!activosResponse.data || !Array.isArray(activosResponse.data)) {
-                throw new Error('Formato de datos inválido recibido del servidor');
-            }
-
-            // Filtrar activos que tengan categoría
-            const activosFiltrados = activosResponse.data.filter(activo => activo && activo.Categoría);
-            
-            if (activosFiltrados.length === 0) {
-                throw new Error('No se encontraron activos con categoría en la base de datos');
-            }
-
-            console.log('Activos obtenidos:', activosFiltrados.length);
-            setActivos(activosFiltrados);
-            
-            // Extraer categorías únicas
-            const categoriasUnicas = [...new Set(activosFiltrados.map(activo => activo.Categoría))];
-            
-            if (categoriasUnicas.length === 0) {
-                throw new Error('No se encontraron categorías en los activos');
-            }
-
-            setCategorias(categoriasUnicas);
-            setLoading(false);
+            console.log('Obteniendo activos...');
+            const response = await axiosInstance.get('/api/tfm/Activos/all');
+            console.log('Respuesta de activos:', response.data);
+            return response.data;
         } catch (error) {
             console.error('Error al cargar activos:', error);
-            setError(error.message || 'Error al cargar los activos. Por favor, intente nuevamente.');
-            setLoading(false);
+            throw new Error('Error de conexión con la base de datos');
         }
     };
 
@@ -387,7 +339,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
             // Actualizar la auditoría en la base de datos
             const response = await axios.put(
-                `${API_URL}/api/auditoria/${auditoriaId}`,
+                `${MONGODB_API_URL}/api/auditoria/${auditoriaId}`,
                 datosCategoria,
                 {
                     headers: {
@@ -460,7 +412,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
             // Actualizar la auditoría en la base de datos
             const response = await axios.put(
-                `${API_URL}/api/auditoria/${auditoriaId}`,
+                `${MONGODB_API_URL}/api/auditoria/${auditoriaId}`,
                 datosFinales,
                 {
                     headers: {
