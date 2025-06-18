@@ -55,7 +55,7 @@ const Register = ({ setUser }) => {
             });
 
             // Redirigir al usuario a su página principal
-            navigate('/home');
+            navigate('/user');
         } catch (error) {
             console.error('Error en registro:', error);
             if (error.code === 409) {
