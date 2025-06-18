@@ -218,7 +218,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const verificarConexionBackend = async () => {
         try {
             console.log('Verificando conexión con el backend...');
-            const response = await axiosInstance.get('/api/tfm/api/health');
+            const response = await axiosInstance.get('/api/health');
             console.log('Respuesta del backend:', response.data);
             return true;
         } catch (error) {
@@ -471,7 +471,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
 
                 // Redirigir a la página de resultados después de un breve delay
                 setTimeout(() => {
-                    navigate('/home');
+                    navigate('/user');
                 }, 2000);
             }
         } catch (error) {
