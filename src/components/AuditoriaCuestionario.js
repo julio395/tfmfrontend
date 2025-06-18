@@ -218,7 +218,7 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
     const verificarConexionBackend = async () => {
         try {
             console.log('Verificando conexión con el backend...');
-            const response = await axiosInstance.get('/api/health');
+            const response = await axiosInstance.get('/api/tfm/api/health');
             console.log('Respuesta del backend:', response.data);
             return true;
         } catch (error) {
