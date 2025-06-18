@@ -164,6 +164,12 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                         procesadoIA: false
                     };
                     console.log('Creando nueva auditoría:', nuevaAuditoria);
+                    
+                    // Verificar que tenemos los datos necesarios
+                    if (!userDataFinal.$id) {
+                        throw new Error('ID de usuario no disponible');
+                    }
+                    
                     const createResponse = await axiosInstance.post('/api/auditoria/en-progreso', nuevaAuditoria, {
                         headers: {
                             'Content-Type': 'application/json'
@@ -190,10 +196,23 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     }
                 } catch (createError) {
                     console.error('Error al crear nueva auditoría:', createError);
+                    console.error('Detalles del error:', {
+                        message: createError.message,
+                        response: createError.response?.data,
+                        status: createError.response?.status,
+                        statusText: createError.response?.statusText
+                    });
+                    
                     if (createError.response) {
                         console.error('Datos de error del servidor:', createError.response.data);
+                        setError(`Error del servidor: ${createError.response.data.error || createError.response.data.details || 'Error desconocido'}`);
+                    } else if (createError.request) {
+                        console.error('No se recibió respuesta del servidor');
+                        setError('No se pudo conectar con el servidor. Verifica que el backend esté corriendo.');
+                    } else {
+                        console.error('Error en la configuración de la petición');
+                        setError(`Error de configuración: ${createError.message}`);
                     }
-                    setError('Error al iniciar la auditoría. Por favor, intente nuevamente.');
                 }
             }
         };
@@ -240,15 +259,43 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
             await verificarConexionBackend();
             console.log('Conexión verificada, obteniendo activos...');
             
-            const response = await axiosInstance.get('/api/tfm/Activos/all');
+            // Intentar obtener datos optimizados primero
+            let response;
+            try {
+                response = await axiosInstance.get('/api/tfm/Activos?fields=Nombre,Categoría,Proveedor&limit=1000');
+            } catch (optimizedError) {
+                console.log('API optimizada no disponible, usando endpoint completo...');
+                response = await axiosInstance.get('/api/tfm/Activos/all');
+            }
+            
             console.log('Respuesta de activos:', response.data);
             
-            if (!response.data || !Array.isArray(response.data)) {
+            let activosData;
+            if (response.data && response.data.data && Array.isArray(response.data.data)) {
+                // Formato optimizado
+                activosData = response.data.data;
+            } else if (response.data && Array.isArray(response.data)) {
+                // Formato completo
+                activosData = response.data;
+            } else {
                 console.error('Formato de respuesta inválido:', response.data);
                 throw new Error('Formato de respuesta inválido del servidor');
             }
             
-            return response.data;
+            // Limitar a 1000 activos para mejorar el rendimiento
+            const activosLimitados = activosData.slice(0, 1000);
+            console.log(`Procesando ${activosLimitados.length} activos de ${activosData.length} totales`);
+            
+            // Guardar los activos en el estado
+            setActivos(activosLimitados);
+            
+            // Extraer categorías únicas de los activos
+            const categoriasUnicas = [...new Set(activosLimitados.map(activo => activo.Categoría))].filter(Boolean);
+            console.log('Categorías encontradas:', categoriasUnicas);
+            setCategorias(categoriasUnicas);
+            
+            setLoading(false);
+            return activosLimitados;
         } catch (error) {
             console.error('Error al cargar activos:', error);
             if (error.response) {
@@ -257,12 +304,23 @@ const AuditoriaCuestionario = ({ onCancel, userData }) => {
                     data: error.response.data
                 });
             }
+            setError('Error al cargar los activos. Por favor, intente más tarde.');
+            setLoading(false);
             throw new Error('Error al cargar los activos. Por favor, intente más tarde.');
         }
     };
 
     useEffect(() => {
-        fetchActivos();
+        const cargarDatos = async () => {
+            try {
+                await fetchActivos();
+            } catch (error) {
+                console.error('Error en la carga inicial:', error);
+                setError(error.message);
+                setLoading(false);
+            }
+        };
+        cargarDatos();
     }, []);
 
     // Función para obtener nombres únicos de activos por categoría
